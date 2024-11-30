@@ -17,7 +17,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
-import { instructions } from '../utils/conversation_config.js';
+import { technicalInstructions, behavioralInstructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
 import { X, Edit, Zap, ArrowUp, ArrowDown, ArrowLeft } from 'react-feather';
@@ -149,6 +149,11 @@ export function ConsolePage() {
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
+    // Set instructions based on interview type
+    const currentInstructions = interviewType === 'technical' 
+      ? technicalInstructions 
+      : behavioralInstructions;
+
     // Set state variables
     startTimeRef.current = new Date().toISOString();
     setIsConnected(true);
@@ -163,18 +168,22 @@ export function ConsolePage() {
 
     // Connect to realtime API
     await client.connect();
+    
+    // Update session with appropriate instructions
+    client.updateSession({ instructions: currentInstructions });
+    
+    // Start with a contextual greeting
     client.sendUserMessageContent([
       {
         type: `input_text`,
-        text: `Hello!`,
-        // text: `For testing purposes, I want you to list ten car brands. Number each item, e.g. "one (or whatever number you are one): the item name".`
+        text: `Hello, I'm ready for my ${interviewType} interview.`,
       },
     ]);
 
     if (client.getTurnDetectionType() === 'server_vad') {
       await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     }
-  }, []);
+  }, [interviewType]);
 
   /**
    * Disconnect and reset conversation state
@@ -185,14 +194,24 @@ export function ConsolePage() {
     setItems([]);
     setMemoryKv({});
 
-    const client = clientRef.current;
-    client.disconnect();
+    try {
+      const client = clientRef.current;
+      if (client) {
+        client.disconnect();
+      }
 
-    const wavRecorder = wavRecorderRef.current;
-    await wavRecorder.end();
+      const wavRecorder = wavRecorderRef.current;
+      if (wavRecorder) {
+        await wavRecorder.end();
+      }
 
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    await wavStreamPlayer.interrupt();
+      const wavStreamPlayer = wavStreamPlayerRef.current;
+      if (wavStreamPlayer) {
+        await wavStreamPlayer.interrupt();
+      }
+    } catch (error) {
+      console.error('Error during disconnect:', error);
+    }
   }, []);
 
   const deleteConversationItem = useCallback(async (id: string) => {
@@ -353,8 +372,13 @@ export function ConsolePage() {
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
 
+    // Set instructions based on interview type
+    const currentInstructions = interviewType === 'technical' 
+      ? technicalInstructions 
+      : behavioralInstructions;
+
     // Set instructions
-    client.updateSession({ instructions: instructions });
+    client.updateSession({ instructions: currentInstructions });
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
@@ -432,7 +456,42 @@ export function ConsolePage() {
       // cleanup; resets to defaults
       client.reset();
     };
-  }, []);
+  }, [interviewType]);
+
+  /**
+   * Add this function near your other handlers
+   */
+  const handleLeavePage = useCallback(async () => {
+    if (isConnected) {
+      await disconnectConversation();
+    }
+  }, [isConnected, disconnectConversation]);
+
+  /**
+   * Modify the back button handler
+   */
+  const handleBackToDashboard = async () => {
+    await handleLeavePage();
+    navigate('/dashboard');
+  };
+
+  /**
+   * Add cleanup effect
+   */
+  useEffect(() => {
+    return () => {
+      const cleanup = async () => {
+        try {
+          if (isConnected && clientRef.current) {
+            await disconnectConversation();
+          }
+        } catch (error) {
+          console.error('Error during cleanup:', error);
+        }
+      };
+      cleanup();
+    };
+  }, [isConnected, disconnectConversation]);
 
   /**
    * Render the application
@@ -446,7 +505,7 @@ export function ConsolePage() {
             iconPosition="start"
             buttonStyle="flush"
             label="Back to Dashboard"
-            onClick={() => navigate('/dashboard')}
+            onClick={handleBackToDashboard}
           />
           <div className="interview-header">
             <h1 className="text-2xl font-bold mb-2">
@@ -471,6 +530,29 @@ export function ConsolePage() {
           )}
         </div>
       </div>
+      
+      <div className="start-interview-container">
+        {!isConnected ? (
+          <Button
+            label="Start Interview"
+            iconPosition="start"
+            icon={Zap}
+            buttonStyle="action"
+            onClick={connectConversation}
+            className="start-interview-button"
+          />
+        ) : (
+          <Button
+            label="End Interview"
+            iconPosition="end"
+            icon={X}
+            buttonStyle="action"
+            onClick={disconnectConversation}
+            className="start-interview-button"
+          />
+        )}
+      </div>
+
       <div className="content-main">
         <div className="content-logs">
           <div className="content-block conversation">
@@ -525,12 +607,6 @@ export function ConsolePage() {
                               '(truncated)'}
                           </div>
                         )}
-                      {conversationItem.formatted.file && (
-                        <audio
-                          src={conversationItem.formatted.file.url}
-                          controls
-                        />
-                      )}
                     </div>
                   </div>
                 );
@@ -611,34 +687,6 @@ export function ConsolePage() {
               })}
             </div>
           </div>
-          <div className="content-actions">
-            <Toggle
-              defaultValue={true}
-              labels={['manual', 'vad']}
-              values={['none', 'server_vad']}
-              onChange={(_, value) => changeTurnEndType(value)}
-            />
-            <div className="spacer" />
-            {isConnected && canPushToTalk && (
-              <Button
-                label={isRecording ? 'release to send' : 'push to talk'}
-                buttonStyle={isRecording ? 'alert' : 'regular'}
-                disabled={!isConnected || !canPushToTalk}
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-              />
-            )}
-            <div className="spacer" />
-            <Button
-              label={isConnected ? 'disconnect' : 'connect'}
-              iconPosition={isConnected ? 'end' : 'start'}
-              icon={isConnected ? X : Zap}
-              buttonStyle={isConnected ? 'regular' : 'action'}
-              onClick={
-                isConnected ? disconnectConversation : connectConversation
-              }
-            />
-          </div>
         </div>
         <div className="content-right">
           <div className="content-block kv">
@@ -648,6 +696,25 @@ export function ConsolePage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="content-actions">
+        <Toggle
+          defaultValue={true}
+          labels={['manual', 'vad']}
+          values={['none', 'server_vad']}
+          onChange={(_, value) => changeTurnEndType(value)}
+        />
+        <div className="spacer" />
+        {isConnected && canPushToTalk && (
+          <Button
+            label={isRecording ? 'release to send' : 'push to talk'}
+            buttonStyle={isRecording ? 'alert' : 'regular'}
+            disabled={!isConnected || !canPushToTalk}
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+          />
+        )}
       </div>
     </div>
   );
