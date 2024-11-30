@@ -106,6 +106,8 @@ export function ConsolePage() {
   const [canPushToTalk, setCanPushToTalk] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
+  const [questionCount, setQuestionCount] = useState(0);
+  const MAX_QUESTIONS = 3; // Change to 10 when ready
 
   /**
    * Utility for formatting the timing of logs
@@ -439,14 +441,27 @@ export function ConsolePage() {
       if (delta?.audio) {
         wavStreamPlayer.add16BitPCM(delta.audio, item.id);
       }
-      if (item.status === 'completed' && item.formatted.audio?.length) {
-        const wavFile = await WavRecorder.decode(
-          item.formatted.audio,
-          24000,
-          24000
-        );
-        item.formatted.file = wavFile;
+      
+      // Check if this is a new question from the assistant
+      if (item.role === 'assistant' && 
+          item.status === 'completed' && 
+          item.formatted.text && 
+          isQuestion(item.formatted.text)) {
+        const newCount = questionCount + 1;
+        setQuestionCount(newCount);
+        
+        // End interview if max questions reached
+        if (newCount >= MAX_QUESTIONS) {
+          await disconnectConversation();
+          navigate('/feedback', { 
+            state: { 
+              transcript: items,
+              interviewType: interviewType
+            }
+          });
+        }
       }
+      
       setItems(items);
     });
 
@@ -494,6 +509,13 @@ export function ConsolePage() {
   }, [isConnected, disconnectConversation]);
 
   /**
+   * Add function to detect questions from AI
+   */
+  const isQuestion = (text: string) => {
+    return text.trim().endsWith('?');
+  };
+
+  /**
    * Render the application
    */
   return (
@@ -528,6 +550,9 @@ export function ConsolePage() {
               onClick={() => resetAPIKey()}
             />
           )}
+        </div>
+        <div className="question-counter">
+          Question {questionCount} of {MAX_QUESTIONS}
         </div>
       </div>
       
