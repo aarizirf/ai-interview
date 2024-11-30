@@ -29,6 +29,7 @@ const LoginPage = () => {
           Sign in with Google
         </button>
         {error && <p className="text-red-500 mt-4 text-center">{error}</p>}
+        This is rowans login page
       </div>
     </div>
   );
