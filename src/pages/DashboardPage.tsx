@@ -31,6 +31,8 @@ const DashboardPage = () => {
     { id: 'behavioral', label: 'Behavioral (Coming Soon)', disabled: true }
   ];
 
+  const color = "#399844";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Navigation Bar */}
@@ -40,8 +42,8 @@ const DashboardPage = () => {
             {/* Logo and Name */}
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center pl-0">
-                <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
-                  AI Interviewer
+                <span className="text-2xl font-extrabold text-[#399844] tracking-tight hover:scale-105 transition-transform duration-200">
+                  AlphaEd
                 </span>
               </div>
               
@@ -54,7 +56,7 @@ const DashboardPage = () => {
                     disabled={tab.disabled}
                     className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors duration-200 ${
                       activeTab === tab.id
-                        ? 'border-indigo-600 text-gray-900'
+                        ? 'border-[#399844] text-gray-900'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     } ${
                       tab.disabled 
@@ -72,7 +74,7 @@ const DashboardPage = () => {
             <div className="flex items-center">
               <button
                 onClick={handleSignOut}
-                className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2"
+                className="bg-white text-gray-700 px-4 py-2 font-semibold border-gray-300 hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2"
               >
                 <span>Sign Out</span>
               </button>

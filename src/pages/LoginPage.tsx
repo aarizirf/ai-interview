@@ -19,56 +19,65 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          {/* Left side - Copy */}
-          <div className="text-white space-y-6">
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Master Your Interview Game
-            </h1>
-            <div className="space-y-4">
+    <div className="min-h-screen flex flex-col bg-[#f5f5f5] relative">
+      {/* Centered Text */}
+      <div className="absolute top-0 w-full text-center pt-24">
+        <span className="text-5xl font-bold text-gray-900">AlphaEd</span>
+        <div className="mt-3">
+          <span className="text-xl text-gray-900">Finance and Consulting Interview Prep</span>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-grow flex items-center justify-center relative">
+        {/* Large Alpha Background */}
+        <div className="absolute text-[#399844] font-['Times_New_Roman'] italic text-[20rem] opacity-20 right-[45%]">
+          α
+        </div>
+        
+        {/* Card Content */}
+        <div className="relative max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl backdrop-blur-lg bg-opacity-95">
+            <h2 className="text-3xl font-bold leading-tight font-['Inter'] text-gray-800 mb-6">
+              Master Your Interviews
+            </h2>
+            <div className="space-y-4 font-['Inter'] mb-8">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0 mt-1">
-                  <svg className="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[#399844]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-lg text-indigo-100">
+                <p className="text-lg text-gray-600">
                   Interviews and prep are hard. We made it easy.
                 </p>
               </div>
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0 mt-1">
-                  <svg className="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[#399844]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-lg text-indigo-100">
+                <p className="text-lg text-gray-600">
                   Turbo charge your learning experience with AI-powered feedback
                 </p>
               </div>
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0 mt-1">
-                  <svg className="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[#399844]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-lg text-indigo-100">
+                <p className="text-lg text-gray-600">
                   Practice with real consulting and finance case scenarios
                 </p>
               </div>
             </div>
-          </div>
 
-          {/* Right side - Login Card */}
-          <div className="bg-white p-8 rounded-2xl shadow-2xl backdrop-blur-lg bg-opacity-95">
-            <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">
-              AI Interviewer for Finance & Consulting
-            </h2>
+            {/* Google Sign In Button */}
             <button
               onClick={handleGoogleSignIn}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-medium text-lg hover:opacity-90 transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl"
+              className="w-full bg-gradient-to-r from-[#399844] via-[#2c7a3d] to-[#1f5c36] text-white py-3 px-6 rounded-lg font-medium text-lg hover:opacity-90 transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl font-['Inter']"
             >
               <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path
@@ -88,7 +97,7 @@ const LoginPage = () => {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              <span>Sign in with Google</span>
+              <span>Get Started Today</span>
             </button>
             {error && <p className="text-red-500 mt-4 text-center">{error}</p>}
             <p className="mt-6 text-sm text-gray-500 text-center">
