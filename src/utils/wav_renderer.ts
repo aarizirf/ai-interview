@@ -65,14 +65,6 @@ const normalizeArray = (
 export const WavRenderer = {
   /**
    * Renders a point-in-time snapshot of an audio sample, usually frequency values
-   * @param canvas
-   * @param ctx
-   * @param data
-   * @param color
-   * @param pointCount number of bars to render
-   * @param barWidth width of bars in px
-   * @param barSpacing spacing between bars in px
-   * @param center vertically center the bars
    */
   drawBars: (
     canvas: HTMLCanvasElement,
