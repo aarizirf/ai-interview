@@ -17,10 +17,17 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
-import { technicalInstructions, behavioralInstructions } from '../utils/conversation_config.js';
+import { 
+  mergerModelInstructions, 
+  lboInstructions, 
+  dcfInstructions, 
+  valuationInstructions, 
+  enterpriseValueInstructions, 
+  accountingInstructions 
+} from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, ArrowLeft } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, ArrowLeft, PieChart, BarChart, Activity, FileText } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -152,9 +159,14 @@ export function ConsolePage() {
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
     // Set instructions based on interview type
-    const currentInstructions = interviewType === 'technical' 
-      ? technicalInstructions 
-      : behavioralInstructions;
+    const currentInstructions = 
+      interviewType === 'merger' ? mergerModelInstructions :
+      interviewType === 'lbo' ? lboInstructions :
+      interviewType === 'dcf' ? dcfInstructions :
+      interviewType === 'valuation' ? valuationInstructions :
+      interviewType === 'enterprise' ? enterpriseValueInstructions :
+      interviewType === 'accounting' ? accountingInstructions :
+      mergerModelInstructions;
 
     // Set state variables
     startTimeRef.current = new Date().toISOString();
@@ -195,11 +207,8 @@ export function ConsolePage() {
    * Disconnect and reset conversation state
    */
   const disconnectConversation = useCallback(async () => {
-    setIsConnected(false);
-    setRealtimeEvents([]);
-    setItems([]);
-    setMemoryKv({});
-
+    const items = clientRef.current?.conversation.getItems() || [];
+    
     try {
       const client = clientRef.current;
       if (client) {
@@ -215,10 +224,24 @@ export function ConsolePage() {
       if (wavStreamPlayer) {
         await wavStreamPlayer.interrupt();
       }
+
+      // Navigate to feedback page with transcript
+      navigate('/feedback', {
+        state: {
+          transcript: items,
+          interviewType: interviewType
+        }
+      });
+
     } catch (error) {
       console.error('Error during disconnect:', error);
     }
-  }, []);
+
+    setIsConnected(false);
+    setRealtimeEvents([]);
+    setItems([]);
+    setMemoryKv({});
+  }, [navigate, interviewType]);
 
   const deleteConversationItem = useCallback(async (id: string) => {
     const client = clientRef.current;
@@ -379,9 +402,14 @@ export function ConsolePage() {
     const client = clientRef.current;
 
     // Set instructions based on interview type
-    const currentInstructions = interviewType === 'technical' 
-      ? technicalInstructions 
-      : behavioralInstructions;
+    const currentInstructions = 
+      interviewType === 'merger' ? mergerModelInstructions :
+      interviewType === 'lbo' ? lboInstructions :
+      interviewType === 'dcf' ? dcfInstructions :
+      interviewType === 'valuation' ? valuationInstructions :
+      interviewType === 'enterprise' ? enterpriseValueInstructions :
+      interviewType === 'accounting' ? accountingInstructions :
+      mergerModelInstructions;
 
     // Set instructions
     client.updateSession({ instructions: currentInstructions });
@@ -535,12 +563,22 @@ export function ConsolePage() {
           />
           <div className="interview-header">
             <h1 className="text-2xl font-bold mb-2">
-              {interviewType === 'technical' ? 'Technical Interview' : 'Behavioral Interview'}
+              {interviewType === 'merger' ? 'Merger Model Interview' :
+               interviewType === 'lbo' ? 'LBO Interview' :
+               interviewType === 'dcf' ? 'DCF Interview' :
+               interviewType === 'valuation' ? 'Valuation Interview' :
+               interviewType === 'enterprise' ? 'Enterprise Value Interview' :
+               interviewType === 'accounting' ? 'Accounting Interview' :
+               'Merger Model Interview'}
             </h1>
             <p className="text-gray-600">
-              {interviewType === 'technical' 
-                ? 'Practice coding problems and system design questions'
-                : 'Practice common behavioral and situational questions'}
+              {interviewType === 'merger' ? 'Practice M&A concepts and merger modeling' :
+               interviewType === 'lbo' ? 'Practice leveraged buyout concepts and modeling' :
+               interviewType === 'dcf' ? 'Practice discounted cash flow analysis and valuation' :
+               interviewType === 'valuation' ? 'Practice company valuation methodologies and analysis' :
+               interviewType === 'enterprise' ? 'Practice enterprise and equity value concepts' :
+               interviewType === 'accounting' ? 'Practice financial statements and accounting concepts' :
+               'Practice M&A concepts and merger modeling'}
             </p>
           </div>
         </div>

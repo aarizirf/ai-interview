@@ -1,57 +1,74 @@
-import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Copy, Check } from 'react-feather';
+import { useState } from 'react';
+import './FeedbackPage.scss';
 
 export const FeedbackPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { transcript, interviewType } = location.state || {};
-  const [selectedResponses, setSelectedResponses] = useState<{[key: string]: boolean}>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   if (!transcript) {
     navigate('/dashboard');
     return null;
   }
 
-  const toggleResponseSelection = (id: string) => {
-    setSelectedResponses(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   return (
-    <div className="feedback-page">
-      <h1 className="text-3xl font-bold mb-6">Feedback on {interviewType} Interview</h1>
-      
+    <div data-component="FeedbackPage" className="feedback-page">
+      <div className="header">
+        <div className="header-left">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="back-button"
+          >
+            <ArrowLeft size={20} />
+            <span>Back to Dashboard</span>
+          </button>
+          <h1>{interviewType} Interview Transcript</h1>
+        </div>
+      </div>
+
       <div className="transcript-container">
-        {transcript.map((item: any) => {
-          const isUserResponse = item.role === 'user';
-          return (
+        {transcript
+          .filter((item: any) => {
+            const content = item.formatted.text || item.formatted.transcript;
+            return content && content.trim().length > 0;  // Only show items with non-empty content
+          })
+          .map((item: any) => (
             <div 
               key={item.id}
-              className={`transcript-item ${isUserResponse ? 'user-response' : 'interviewer-question'} ${
-                selectedResponses[item.id] ? 'selected' : ''
-              }`}
-              onClick={() => isUserResponse && toggleResponseSelection(item.id)}
+              className={`transcript-item ${item.role}`}
             >
-              <div className="speaker-label">
-                {item.role === 'user' ? 'You' : 'Interviewer'}:
+              <div className="card-header">
+                <div className="speaker-label">
+                  {item.role === 'user' ? 'You' : 'Interviewer'}
+                </div>
+                {item.role === 'user' && (
+                  <button
+                    className="copy-button"
+                    onClick={() => copyToClipboard(item.formatted.text || item.formatted.transcript, item.id)}
+                  >
+                    {copiedId === item.id ? <Check size={16} /> : <Copy size={16} />}
+                    <span>{copiedId === item.id ? 'Copied!' : 'Copy'}</span>
+                  </button>
+                )}
               </div>
               <div className="content">
                 {item.formatted.text || item.formatted.transcript}
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      <div className="actions">
-        <button 
-          className="back-button"
-          onClick={() => navigate('/dashboard')}
-        >
-          Back to Dashboard
-        </button>
+          ))}
       </div>
     </div>
   );

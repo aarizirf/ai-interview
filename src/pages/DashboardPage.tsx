@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebase';
 import { useState, useEffect } from 'react';
-import { BookOpen, MessageCircle } from 'react-feather';
+import { BookOpen, MessageCircle, TrendingUp, DollarSign, PieChart, BarChart, Activity, FileText } from 'react-feather';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -26,9 +26,9 @@ const DashboardPage = () => {
   };
 
   const tabs = [
-    { id: 'investment-banking', label: 'Investment Banking' },
-    { id: 'consulting', label: 'Consulting' },
-    { id: 'behavioral', label: 'Behavioral' }
+    { id: 'investment-banking', label: 'Investment Banking', disabled: false },
+    { id: 'consulting', label: 'Consulting (Coming Soon)', disabled: true },
+    { id: 'behavioral', label: 'Behavioral (Coming Soon)', disabled: true }
   ];
 
   return (
@@ -50,11 +50,16 @@ const DashboardPage = () => {
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                    disabled={tab.disabled}
                     className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors duration-200 ${
                       activeTab === tab.id
                         ? 'border-indigo-600 text-gray-900'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    } ${
+                      tab.disabled 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'cursor-pointer'
                     }`}
                   >
                     {tab.label}
@@ -86,27 +91,71 @@ const DashboardPage = () => {
             We've sourced thousands of historical interviews and prep materials to create personalized mock interviews tailored to your needs.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <button
-            onClick={() => navigate('/console', { state: { type: 'technical' }})}
+            onClick={() => navigate('/console', { state: { type: 'merger' }})}
             className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
           >
             <div className="flex items-center gap-3 mb-2">
-              <BookOpen className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Technical Interview</h2>
+              <TrendingUp className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Merger Model</h2>
             </div>
-            <p className="text-gray-600">Practice coding problems and system design questions</p>
+            <p className="text-gray-600">Practice M&A concepts and merger modeling</p>
           </button>
           
           <button
-            onClick={() => navigate('/console', { state: { type: 'behavioral' }})}
+            onClick={() => navigate('/console', { state: { type: 'lbo' }})}
             className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
           >
             <div className="flex items-center gap-3 mb-2">
-              <MessageCircle className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Behavioral Questions</h2>
+              <DollarSign className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-semibold text-gray-900">LBO Interview</h2>
             </div>
-            <p className="text-gray-600">Practice common behavioral and situational questions</p>
+            <p className="text-gray-600">Practice leveraged buyout concepts and modeling</p>
+          </button>
+          
+          <button
+            onClick={() => navigate('/console', { state: { type: 'dcf' }})}
+            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <PieChart className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-semibold text-gray-900">DCF Interview</h2>
+            </div>
+            <p className="text-gray-600">Practice discounted cash flow analysis and valuation</p>
+          </button>
+          
+          <button
+            onClick={() => navigate('/console', { state: { type: 'valuation' }})}
+            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <BarChart className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Valuation Interview</h2>
+            </div>
+            <p className="text-gray-600">Practice company valuation methodologies and analysis</p>
+          </button>
+          
+          <button
+            onClick={() => navigate('/console', { state: { type: 'enterprise' }})}
+            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Activity className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Enterprise Value</h2>
+            </div>
+            <p className="text-gray-600">Practice enterprise and equity value concepts</p>
+          </button>
+          
+          <button
+            onClick={() => navigate('/console', { state: { type: 'accounting' }})}
+            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <FileText className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Accounting Interview</h2>
+            </div>
+            <p className="text-gray-600">Practice financial statements and accounting concepts</p>
           </button>
         </div>
       </div>
