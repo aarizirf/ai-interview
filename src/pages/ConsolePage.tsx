@@ -171,6 +171,11 @@ export function ConsolePage() {
     // Connect to realtime API
     await client.connect();
     
+    // Set VAD mode from the start
+    client.updateSession({
+      turn_detection: { type: 'server_vad' }
+    });
+    
     // Update session with appropriate instructions
     client.updateSession({ instructions: currentInstructions });
     
@@ -182,9 +187,8 @@ export function ConsolePage() {
       },
     ]);
 
-    if (client.getTurnDetectionType() === 'server_vad') {
-      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    }
+    // Start recording immediately since we're in VAD mode
+    await wavRecorder.record((data) => client.appendInputAudio(data.mono));
   }, [interviewType]);
 
   /**
@@ -713,24 +717,16 @@ export function ConsolePage() {
             </div>
           </div>
         </div>
-        <div className="content-right">
-          <div className="content-block kv">
-            <div className="content-block-title">set_memory()</div>
-            <div className="content-block-body content-kv">
-              {JSON.stringify(memoryKv, null, 2)}
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="content-actions">
         <Toggle
           defaultValue={true}
-          labels={['manual', 'vad']}
+          labels={['Press to talk', 'Automatic']}
           values={['none', 'server_vad']}
           onChange={(_, value) => changeTurnEndType(value)}
         />
-        <div className="spacer" />
+        <div className="toggle-spacer" />
         {isConnected && canPushToTalk && (
           <Button
             label={isRecording ? 'release to send' : 'push to talk'}
