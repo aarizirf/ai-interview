@@ -45,6 +45,62 @@ interface RealtimeEvent {
   event: { [key: string]: any };
 }
 
+// Add this helper function to get topics based on interview type
+const getTopics = (type: string) => {
+  switch(type) {
+    case 'merger':
+      return [
+        'Accretion/Dilution Analysis',
+        'Deal Structures',
+        'Synergy Valuation',
+        'Purchase Price Allocation',
+        'Transaction Impact'
+      ];
+    case 'lbo':
+      return [
+        'Leverage Analysis',
+        'Debt Structuring',
+        'Returns Modeling',
+        'Exit Strategies',
+        'PE Investment Criteria'
+      ];
+    case 'dcf':
+      return [
+        'Free Cash Flow Projections',
+        'WACC Calculation',
+        'Terminal Value Analysis',
+        'Growth Rate Assumptions',
+        'Sensitivity Analysis'
+      ];
+    case 'valuation':
+      return [
+        'Trading Comparables',
+        'Precedent Transactions',
+        'Public Company Analysis',
+        'Industry Multiples',
+        'Private Company Valuation'
+      ];
+    case 'enterprise':
+      return [
+        'Enterprise vs Equity Value',
+        'Diluted Share Calculations',
+        'Treatment of Debt & Cash',
+        'Minority Interest',
+        'Convertible Securities'
+      ];
+    case 'accounting':
+      return [
+        'Financial Statements',
+        'Working Capital Analysis',
+        'Cash vs Accrual',
+        'GAAP vs Non-GAAP',
+        'Balance Sheet Impact'
+      ];
+    default:
+      return [];
+  }
+};
+
 export function ConsolePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -354,9 +410,9 @@ export function ConsolePage() {
               clientCtx,
               result.values,
               '#000000',
-              40,
-              3,
-              3
+              50,
+              10,
+              5
             );
           }
         }
@@ -376,7 +432,7 @@ export function ConsolePage() {
               serverCtx,
               result.values,
               '#009900',
-              10,
+              50,
               0,
               8
             );
@@ -551,110 +607,116 @@ export function ConsolePage() {
    * Render the application
    */
   return (
-    <div data-component="ConsolePage">
-      <div className="content-top">
-        <div className="content-title">
-          <Button
-            icon={ArrowLeft}
-            iconPosition="start"
-            buttonStyle="flush"
-            label="Back to Dashboard"
-            onClick={handleBackToDashboard}
-          />
-          <div className="interview-header">
-            <h1 className="text-2xl font-bold mb-2">
-              {interviewType === 'merger' ? 'Merger Model Interview' :
-               interviewType === 'lbo' ? 'LBO Interview' :
-               interviewType === 'dcf' ? 'DCF Interview' :
-               interviewType === 'valuation' ? 'Valuation Interview' :
-               interviewType === 'enterprise' ? 'Enterprise Value Interview' :
-               interviewType === 'accounting' ? 'Accounting Interview' :
-               'Merger Model Interview'}
-            </h1>
-            <p className="text-gray-600">
-              {interviewType === 'merger' ? 'Practice M&A concepts and merger modeling' :
-               interviewType === 'lbo' ? 'Practice leveraged buyout concepts and modeling' :
-               interviewType === 'dcf' ? 'Practice discounted cash flow analysis and valuation' :
-               interviewType === 'valuation' ? 'Practice company valuation methodologies and analysis' :
-               interviewType === 'enterprise' ? 'Practice enterprise and equity value concepts' :
-               interviewType === 'accounting' ? 'Practice financial statements and accounting concepts' :
-               'Practice M&A concepts and merger modeling'}
-            </p>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center">
+            <button
+              onClick={handleBackToDashboard}
+              className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
+            >
+              <ArrowLeft size={20} />
+              <span>Back</span>
+            </button>
           </div>
-        </div>
-        <div className="content-api-key">
+          
           {!LOCAL_RELAY_SERVER_URL && (
-            <Button
-              icon={Edit}
-              iconPosition="end"
-              buttonStyle="flush"
-              label={`api key: ${apiKey.slice(0, 3)}...`}
-              onClick={() => resetAPIKey()}
-            />
+            <button
+              onClick={resetAPIKey}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              API Key: {apiKey.slice(0, 3)}...
+            </button>
           )}
         </div>
-        <div className="question-counter">
-          Question {questionCount} of {MAX_QUESTIONS}
-        </div>
-      </div>
-      
-      <div className="start-interview-container my-10">
-        {!isConnected ? (
-          <Button
-            label="Start Interview"
-            iconPosition="start"
-            icon={Play}
-            buttonStyle="action"
-            onClick={connectConversation}
-            className="start-interview-button"
-          />
-        ) : (
-          <Button
-            label="End Interview"
-            iconPosition="end"
-            icon={X}
-            buttonStyle="action"
-            onClick={disconnectConversation}
-            className="start-interview-button"
-          />
-        )}
       </div>
 
-      <div className="visualization">
-        <div className="visualization-entry">
-          <canvas ref={clientCanvasRef} />
+      {/* Main Content */}
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Title Section */}
+        <div className="text-center mb-12 my-10">
+          <h1 className="text-5xl font-light tracking-tight text-gray-700 mb-4">
+            {interviewType.toUpperCase()} INTERVIEW
+          </h1>
+          {/* <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-50 text-blue-700">
+            Question {questionCount} of {MAX_QUESTIONS}
+          </div> */}
         </div>
-      </div>
 
-      <div className="content-main">
-        <div className="content-logs">
-          <div className="content-block conversation">
-            <div className="visualization">
-              <div className="visualization-entry">
-                <canvas ref={clientCanvasRef} />
+        {/* Topics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+          <h2 className="col-span-full text-xl font-extrabold text-gray-700 mb-2 flex items-center gap-2">
+            <FileText size={24} className="text-blue-600" />
+            Main Topics and Ideas
+          </h2>
+          {getTopics(interviewType).map((topic, index) => (
+            <div 
+              key={index}
+              className="bg-white p-4 rounded-lg shadow-sm border border-gray-100"
+            >
+              <div className="flex items-center gap-2 text-gray-700">
+                <div className="h-2 w-2 rounded-full bg-blue-500" />
+                {topic}
               </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Interview Controls */}
+        <div className="flex flex-col items-center justify-center gap-8">
+          {!isConnected ? (
+            <button
+              onClick={connectConversation}
+              className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
+            >
+              <Play size={24} />
+              Start Interview
+            </button>
+          ) : (
+            <button
+              onClick={disconnectConversation}
+              className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
+            >
+              <X size={24} />
+              End Interview
+            </button>
+          )}
+
+          {/* Visualization */}
+          <div className="w-full max-w-2xl bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="visualization-entry">
+              <canvas ref={clientCanvasRef} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="content-actions">
-        <Toggle
-          defaultValue={true}
-          labels={['Press to talk', 'Automatic']}
-          values={['none', 'server_vad']}
-          onChange={(_, value) => changeTurnEndType(value)}
-        />
-        <div className="toggle-spacer" />
-        {isConnected && canPushToTalk && (
-          <Button
-            label={isRecording ? 'release to send' : 'push to talk'}
-            buttonStyle={isRecording ? 'alert' : 'regular'}
-            disabled={!isConnected || !canPushToTalk}
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
+      {/* Footer Controls */}
+      <div className="bg-white border-t border-gray-100 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <Toggle
+            defaultValue={true}
+            labels={['Press to talk', 'Automatic']}
+            values={['none', 'server_vad']}
+            onChange={(_, value) => changeTurnEndType(value)}
           />
-        )}
+          
+          {isConnected && canPushToTalk && (
+            <button
+              className={`px-6 py-3 rounded-lg font-medium ${
+                isRecording 
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              disabled={!isConnected || !canPushToTalk}
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+            >
+              {isRecording ? 'Release to send' : 'Push to talk'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
