@@ -1,18 +1,32 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Copy, Check } from 'react-feather';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './FeedbackPage.scss';
 
 export const FeedbackPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { transcript, interviewType } = location.state || {};
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // Try to get data from navigation state first, then fallback to sessionStorage
+  const transcript = location.state?.transcript || JSON.parse(sessionStorage.getItem('interview_transcript') || 'null');
+  const interviewType = location.state?.interviewType || sessionStorage.getItem('interview_type') || 'interview';
+
+  console.log('FeedbackPage - Location State:', location.state); // Debug log
+  console.log('FeedbackPage - Transcript:', transcript); // Debug log
+
+  // Clear session storage after reading
+  useEffect(() => {
+    sessionStorage.removeItem('interview_transcript');
+    sessionStorage.removeItem('interview_type');
+  }, []);
 
   if (!transcript) {
+    console.log('No transcript found, redirecting to dashboard'); // Debug log
     navigate('/dashboard');
     return null;
   }
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const copyToClipboard = async (text: string, id: string) => {
     try {

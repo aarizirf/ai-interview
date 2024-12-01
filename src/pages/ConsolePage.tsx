@@ -14,9 +14,15 @@ const LOCAL_RELAY_SERVER_URL: string =
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-import { RealtimeClient } from '@openai/realtime-api-beta';
+import { ClientService, RealtimeEvent } from '../services/ClientService';
+import { WavRenderer } from '../utils/wav_renderer';
+
+import { X, Edit, Play, ArrowUp, ArrowDown, ArrowLeft, PieChart, BarChart, Activity, FileText } from 'react-feather';
+import { Toggle } from '../components/toggle/Toggle';
+
+import './ConsolePage.scss';
+import { getTopics } from '../utils/interview_topics';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
-import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { 
   mergerModelInstructions, 
   lboInstructions, 
@@ -25,81 +31,6 @@ import {
   enterpriseValueInstructions, 
   accountingInstructions 
 } from '../utils/conversation_config.js';
-import { WavRenderer } from '../utils/wav_renderer';
-
-import { X, Edit, Play, ArrowUp, ArrowDown, ArrowLeft, PieChart, BarChart, Activity, FileText } from 'react-feather';
-import { Button } from '../components/button/Button';
-import { Toggle } from '../components/toggle/Toggle';
-import { Map } from '../components/Map';
-
-import './ConsolePage.scss';
-import { isJsxOpeningLikeElement } from 'typescript';
-
-/**
- * Type for all event logs
- */
-interface RealtimeEvent {
-  time: string;
-  source: 'client' | 'server';
-  count?: number;
-  event: { [key: string]: any };
-}
-
-// Add this helper function to get topics based on interview type
-const getTopics = (type: string) => {
-  switch(type) {
-    case 'merger':
-      return [
-        'Accretion/Dilution Analysis',
-        'Deal Structures',
-        'Synergy Valuation',
-        'Purchase Price Allocation',
-        'Transaction Impact'
-      ];
-    case 'lbo':
-      return [
-        'Leverage Analysis',
-        'Debt Structuring',
-        'Returns Modeling',
-        'Exit Strategies',
-        'PE Investment Criteria'
-      ];
-    case 'dcf':
-      return [
-        'Free Cash Flow Projections',
-        'WACC Calculation',
-        'Terminal Value Analysis',
-        'Growth Rate Assumptions',
-        'Sensitivity Analysis'
-      ];
-    case 'valuation':
-      return [
-        'Trading Comparables',
-        'Precedent Transactions',
-        'Public Company Analysis',
-        'Industry Multiples',
-        'Private Company Valuation'
-      ];
-    case 'enterprise':
-      return [
-        'Enterprise vs Equity Value',
-        'Diluted Share Calculations',
-        'Treatment of Debt & Cash',
-        'Minority Interest',
-        'Convertible Securities'
-      ];
-    case 'accounting':
-      return [
-        'Financial Statements',
-        'Working Capital Analysis',
-        'Cash vs Accrual',
-        'GAAP vs Non-GAAP',
-        'Balance Sheet Impact'
-      ];
-    default:
-      return [];
-  }
-};
 
 export function ConsolePage() {
   const navigate = useNavigate();
@@ -125,21 +56,8 @@ export function ConsolePage() {
    * - WavStreamPlayer (speech output)
    * - RealtimeClient (API client)
    */
-  const wavRecorderRef = useRef<WavRecorder>(
-    new WavRecorder({ sampleRate: 24000 })
-  );
-  const wavStreamPlayerRef = useRef<WavStreamPlayer>(
-    new WavStreamPlayer({ sampleRate: 24000 })
-  );
-  const clientRef = useRef<RealtimeClient>(
-    new RealtimeClient(
-      LOCAL_RELAY_SERVER_URL
-        ? { url: LOCAL_RELAY_SERVER_URL }
-        : {
-            apiKey: apiKey,
-            dangerouslyAllowAPIKeyInBrowser: true,
-          }
-    )
+  const clientRef = useRef<ClientService>(
+    new ClientService(apiKey, LOCAL_RELAY_SERVER_URL)
   );
 
   /**
@@ -206,14 +124,49 @@ export function ConsolePage() {
   }, []);
 
   /**
+   * Disconnect and reset conversation state
+   */
+  const disconnectConversation = useCallback(async () => {
+    try {
+      if (!clientRef.current) return;
+
+      const items = await clientRef.current.disconnect();
+      
+      if (!items || items.length === 0) {
+        console.warn('No transcript items found during disconnect');
+        return;
+      }
+
+      // Update state
+      setIsConnected(false);
+      setRealtimeEvents([]);
+      setItems([]);
+      setMemoryKv({});
+
+      // Navigate to feedback page with items directly
+      navigate('/feedback', {
+        state: {
+          transcript: items,
+          interviewType: interviewType
+        }
+      });
+
+    } catch (error) {
+      console.error('Error during disconnect:', error);
+      setIsConnected(false);
+      setRealtimeEvents([]);
+      setItems([]);
+      setMemoryKv({});
+    }
+  }, [navigate, interviewType]);
+
+  /**
    * Connect to conversation:
-   * WavRecorder taks speech input, WavStreamPlayer output, client is API client
+   * WavRecorder takes speech input, WavStreamPlayer output, client is API client
    */
   const connectConversation = useCallback(async () => {
     const client = clientRef.current;
-    const wavRecorder = wavRecorderRef.current;
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-
+    
     // Set instructions based on interview type
     const currentInstructions = 
       interviewType === 'merger' ? mergerModelInstructions :
@@ -228,76 +181,84 @@ export function ConsolePage() {
     startTimeRef.current = new Date().toISOString();
     setIsConnected(true);
     setRealtimeEvents([]);
-    setItems(client.conversation.getItems());
+    setItems(client.getItems());
 
-    // Connect to microphone
-    await wavRecorder.begin();
-
-    // Connect to audio output
-    await wavStreamPlayer.connect();
-
-    // Connect to realtime API
-    await client.connect();
-    
-    // Set VAD mode from the start
-    client.updateSession({
-      turn_detection: { type: 'server_vad' }
-    });
-    
-    // Update session with appropriate instructions
-    client.updateSession({ instructions: currentInstructions });
-    
-    // Start with a contextual greeting
-    client.sendUserMessageContent([
-      {
-        type: `input_text`,
-        text: `Hello, I'm ready for my ${interviewType} interview.`,
+    // Connect and set up event handling
+    await client.connect(
+      currentInstructions,
+      // Event handler for realtime events
+      (realtimeEvent: RealtimeEvent) => {
+        setRealtimeEvents((realtimeEvents) => {
+          const lastEvent = realtimeEvents[realtimeEvents.length - 1];
+          if (lastEvent?.event.type === realtimeEvent.event.type) {
+            lastEvent.count = (lastEvent.count || 0) + 1;
+            return realtimeEvents.slice(0, -1).concat(lastEvent);
+          } else {
+            return realtimeEvents.concat(realtimeEvent);
+          }
+        });
       },
-    ]);
-
-    // Start recording immediately since we're in VAD mode
-    await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-  }, [interviewType]);
-
-  /**
-   * Disconnect and reset conversation state
-   */
-  const disconnectConversation = useCallback(async () => {
-    const items = clientRef.current?.conversation.getItems() || [];
-    
-    try {
-      const client = clientRef.current;
-      if (client) {
-        client.disconnect();
-      }
-
-      const wavRecorder = wavRecorderRef.current;
-      if (wavRecorder) {
-        await wavRecorder.end();
-      }
-
-      const wavStreamPlayer = wavStreamPlayerRef.current;
-      if (wavStreamPlayer) {
-        await wavStreamPlayer.interrupt();
-      }
-
-      // Navigate to feedback page with transcript
-      navigate('/feedback', {
-        state: {
-          transcript: items,
-          interviewType: interviewType
+      // Event handler for conversation updates
+      ({ item, delta }) => {
+        const items = client.getItems();
+        setItems(items);
+        
+        // Check if this is a new question from the assistant
+        if (item.role === 'assistant' && 
+            item.status === 'completed' && 
+            item.formatted.text && 
+            isQuestion(item.formatted.text)) {
+          const newCount = questionCount + 1;
+          setQuestionCount(newCount);
+          
+          // End interview if max questions reached
+          if (newCount >= MAX_QUESTIONS) {
+            disconnectConversation();
+          }
         }
-      });
+      }
+    );
 
+    // Add memory tool
+    try {
+      client.removeTool('set_memory'); // Try to remove if exists
     } catch (error) {
-      console.error('Error during disconnect:', error);
+      // Tool doesn't exist yet, that's fine
     }
 
-    setIsConnected(false);
-    setRealtimeEvents([]);
-    setItems([]);
-    setMemoryKv({});
-  }, [navigate, interviewType]);
+    client.addTool(
+      {
+        name: 'set_memory',
+        description: 'Saves important data about the user into memory.',
+        parameters: {
+          type: 'object',
+          properties: {
+            key: {
+              type: 'string',
+              description:
+                'The key of the memory value. Always use lowercase and underscores, no other characters.',
+            },
+            value: {
+              type: 'string',
+              description: 'Value can be anything represented as a string',
+            },
+          },
+          required: ['key', 'value'],
+        },
+      },
+      async ({ key, value }: { [key: string]: any }) => {
+        setMemoryKv((memoryKv) => {
+          const newKv = { ...memoryKv };
+          newKv[key] = value;
+          return newKv;
+        });
+        return { ok: true };
+      }
+    );
+
+    // Start the session with initial greeting
+    await client.startSession(interviewType);
+  }, [interviewType, questionCount, disconnectConversation]);
 
   const deleteConversationItem = useCallback(async (id: string) => {
     const client = clientRef.current;
@@ -308,17 +269,9 @@ export function ConsolePage() {
    * In push-to-talk mode, start recording
    * .appendInputAudio() for each sample
    */
-  const startRecording = async () => {
+  const startRecording = () => {
     setIsRecording(true);
-    const client = clientRef.current;
-    const wavRecorder = wavRecorderRef.current;
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    const trackSampleOffset = await wavStreamPlayer.interrupt();
-    if (trackSampleOffset?.trackId) {
-      const { trackId, offset } = trackSampleOffset;
-      await client.cancelResponse(trackId, offset);
-    }
-    await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+    clientRef.current.startRecording();
   };
 
   /**
@@ -326,27 +279,14 @@ export function ConsolePage() {
    */
   const stopRecording = async () => {
     setIsRecording(false);
-    const client = clientRef.current;
-    const wavRecorder = wavRecorderRef.current;
-    await wavRecorder.pause();
-    client.createResponse();
+    await clientRef.current.stopRecording();
   };
 
   /**
    * Switch between Manual <> VAD mode for communication
    */
   const changeTurnEndType = async (value: string) => {
-    const client = clientRef.current;
-    const wavRecorder = wavRecorderRef.current;
-    if (value === 'none' && wavRecorder.getStatus() === 'recording') {
-      await wavRecorder.pause();
-    }
-    client.updateSession({
-      turn_detection: value === 'none' ? null : { type: 'server_vad' },
-    });
-    if (value === 'server_vad' && client.isConnected()) {
-      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    }
+    await clientRef.current.changeTurnEndType(value);
     setCanPushToTalk(value === 'none');
   };
 
@@ -384,11 +324,11 @@ export function ConsolePage() {
   useEffect(() => {
     let isLoaded = true;
 
-    const wavRecorder = wavRecorderRef.current;
+    const wavRecorder = clientRef.current.getWavRecorder();
     const clientCanvas = clientCanvasRef.current;
     let clientCtx: CanvasRenderingContext2D | null = null;
 
-    const wavStreamPlayer = wavStreamPlayerRef.current;
+    const wavStreamPlayer = clientRef.current.getWavStreamPlayer();
     const serverCanvas = serverCanvasRef.current;
     let serverCtx: CanvasRenderingContext2D | null = null;
 
@@ -447,119 +387,6 @@ export function ConsolePage() {
       isLoaded = false;
     };
   }, []);
-
-  /**
-   * Core RealtimeClient and audio capture setup
-   * Set all of our instructions, tools, events and more
-   */
-  useEffect(() => {
-    // Get refs
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    const client = clientRef.current;
-
-    // Set instructions based on interview type
-    const currentInstructions = 
-      interviewType === 'merger' ? mergerModelInstructions :
-      interviewType === 'lbo' ? lboInstructions :
-      interviewType === 'dcf' ? dcfInstructions :
-      interviewType === 'valuation' ? valuationInstructions :
-      interviewType === 'enterprise' ? enterpriseValueInstructions :
-      interviewType === 'accounting' ? accountingInstructions :
-      mergerModelInstructions;
-
-    // Set instructions
-    client.updateSession({ instructions: currentInstructions });
-    // Set transcription, otherwise we don't get user transcriptions back
-    client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
-
-    // Add tools
-    client.addTool(
-      {
-        name: 'set_memory',
-        description: 'Saves important data about the user into memory.',
-        parameters: {
-          type: 'object',
-          properties: {
-            key: {
-              type: 'string',
-              description:
-                'The key of the memory value. Always use lowercase and underscores, no other characters.',
-            },
-            value: {
-              type: 'string',
-              description: 'Value can be anything represented as a string',
-            },
-          },
-          required: ['key', 'value'],
-        },
-      },
-      async ({ key, value }: { [key: string]: any }) => {
-        setMemoryKv((memoryKv) => {
-          const newKv = { ...memoryKv };
-          newKv[key] = value;
-          return newKv;
-        });
-        return { ok: true };
-      }
-    );
-
-    // handle realtime events from client + server for event logging
-    client.on('realtime.event', (realtimeEvent: RealtimeEvent) => {
-      setRealtimeEvents((realtimeEvents) => {
-        const lastEvent = realtimeEvents[realtimeEvents.length - 1];
-        if (lastEvent?.event.type === realtimeEvent.event.type) {
-          // if we receive multiple events in a row, aggregate them for display purposes
-          lastEvent.count = (lastEvent.count || 0) + 1;
-          return realtimeEvents.slice(0, -1).concat(lastEvent);
-        } else {
-          return realtimeEvents.concat(realtimeEvent);
-        }
-      });
-    });
-    client.on('error', (event: any) => console.error(event));
-    client.on('conversation.interrupted', async () => {
-      const trackSampleOffset = await wavStreamPlayer.interrupt();
-      if (trackSampleOffset?.trackId) {
-        const { trackId, offset } = trackSampleOffset;
-        await client.cancelResponse(trackId, offset);
-      }
-    });
-    client.on('conversation.updated', async ({ item, delta }: any) => {
-      const items = client.conversation.getItems();
-      if (delta?.audio) {
-        wavStreamPlayer.add16BitPCM(delta.audio, item.id);
-      }
-      
-      // Check if this is a new question from the assistant
-      if (item.role === 'assistant' && 
-          item.status === 'completed' && 
-          item.formatted.text && 
-          isQuestion(item.formatted.text)) {
-        const newCount = questionCount + 1;
-        setQuestionCount(newCount);
-        
-        // End interview if max questions reached
-        if (newCount >= MAX_QUESTIONS) {
-          await disconnectConversation();
-          navigate('/feedback', { 
-            state: { 
-              transcript: items,
-              interviewType: interviewType
-            }
-          });
-        }
-      }
-      
-      setItems(items);
-    });
-
-    setItems(client.conversation.getItems());
-
-    return () => {
-      // cleanup; resets to defaults
-      client.reset();
-    };
-  }, [interviewType]);
 
   /**
    * Add this function near your other handlers
