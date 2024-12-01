@@ -25,48 +25,20 @@ const DashboardPage = () => {
     }
   };
 
-  const tabs = [
-    { id: 'investment-banking', label: 'Investment Banking', disabled: false },
-    { id: 'consulting', label: 'Consulting (Coming Soon)', disabled: true },
-    { id: 'behavioral', label: 'Behavioral (Coming Soon)', disabled: true }
-  ];
-
   const color = "#399844";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-white">
       {/* Navigation Bar */}
-      <nav className="bg-white shadow-md">
+      <nav>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             {/* Logo and Name */}
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center pl-0">
-                <span className="text-2xl font-extrabold text-[#399844] tracking-tight hover:scale-105 transition-transform duration-200">
+                <span className="text-2xl font-extrabold text-blue-600 tracking-tight">
                   AlphaEd
                 </span>
-              </div>
-              
-              {/* Navigation Tabs */}
-              <div className="ml-16 flex space-x-8">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => !tab.disabled && setActiveTab(tab.id)}
-                    disabled={tab.disabled}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors duration-200 ${
-                      activeTab === tab.id
-                        ? 'border-[#399844] text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                    } ${
-                      tab.disabled 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : 'cursor-pointer'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -74,9 +46,9 @@ const DashboardPage = () => {
             <div className="flex items-center">
               <button
                 onClick={handleSignOut}
-                className="bg-white text-gray-700 px-4 py-2 font-semibold border-gray-300 hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2"
+                className="text-gray-500 hover:text-gray-900 px-4 py-2 text-sm font-medium transition-colors duration-200"
               >
-                <span>Sign Out</span>
+                Sign Out
               </button>
             </div>
           </div>
@@ -84,33 +56,44 @@ const DashboardPage = () => {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="mb-16">
+          <h2 className="text-4xl font-semibold text-gray-900">
             Hi {userName || 'there'} 👋
           </h2>
-          <p className="mt-2 text-gray-600 max-w-3xl">
+          <p className="mt-4 text-gray-500 text-lg max-w-3xl">
             We've sourced thousands of historical interviews and prep materials to create personalized mock interviews tailored to your needs.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <button
-            onClick={() => navigate('/console', { state: { type: 'merger' }})}
-            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Merger Model</h2>
-            </div>
-            <p className="text-gray-600">Practice M&A concepts and merger modeling</p>
-          </button>
-          
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Large Feature Card - Q&A */}
+          <div className="md:col-span-2">
+            <button
+              onClick={() => navigate('/console', { state: { type: 'qa' }})}
+              className="w-full text-left p-8 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+            >
+              <div className="flex items-start gap-8">
+                <div className="flex-shrink-0">
+                  <MessageCircle className="w-12 h-12 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">General Q&A</h2>
+                  <p className="text-gray-600 text-lg">
+                    Practice common investment banking interview questions with real-time feedback and guidance.
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Regular Cards */}
           <button
             onClick={() => navigate('/console', { state: { type: 'lbo' }})}
-            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <DollarSign className="w-5 h-5 text-indigo-600" />
+            <div className="flex items-center gap-3 mb-3">
+              <DollarSign className="w-5 h-5 text-blue-600" />
               <h2 className="text-xl font-semibold text-gray-900">LBO Interview</h2>
             </div>
             <p className="text-gray-600">Practice leveraged buyout concepts and modeling</p>
@@ -118,7 +101,7 @@ const DashboardPage = () => {
           
           <button
             onClick={() => navigate('/console', { state: { type: 'dcf' }})}
-            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
               <PieChart className="w-5 h-5 text-indigo-600" />
@@ -129,7 +112,7 @@ const DashboardPage = () => {
           
           <button
             onClick={() => navigate('/console', { state: { type: 'valuation' }})}
-            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
               <BarChart className="w-5 h-5 text-indigo-600" />
@@ -140,7 +123,7 @@ const DashboardPage = () => {
           
           <button
             onClick={() => navigate('/console', { state: { type: 'enterprise' }})}
-            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
               <Activity className="w-5 h-5 text-indigo-600" />
@@ -151,13 +134,25 @@ const DashboardPage = () => {
           
           <button
             onClick={() => navigate('/console', { state: { type: 'accounting' }})}
-            className="text-left bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
               <FileText className="w-5 h-5 text-indigo-600" />
               <h2 className="text-xl font-semibold text-gray-900">Accounting Interview</h2>
             </div>
             <p className="text-gray-600">Practice financial statements and accounting concepts</p>
+          </button>
+
+          {/* Merger Model Card - Moved to last position */}
+          <button
+            onClick={() => navigate('/console', { state: { type: 'merger' }})}
+            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Merger Model</h2>
+            </div>
+            <p className="text-gray-600">Practice M&A concepts and merger modeling</p>
           </button>
         </div>
       </div>

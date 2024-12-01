@@ -607,7 +607,7 @@ export function ConsolePage() {
    * Render the application
    */
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -634,59 +634,65 @@ export function ConsolePage() {
 
       {/* Main Content */}
       <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Title Section */}
-        <div className="text-center mb-12 my-10">
-          <h1 className="text-5xl font-light tracking-tight text-gray-700 mb-4">
-            {interviewType.toUpperCase()} INTERVIEW
-          </h1>
-          {/* <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-50 text-blue-700">
-            Question {questionCount} of {MAX_QUESTIONS}
-          </div> */}
-        </div>
-
-        {/* Topics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
-          <h2 className="col-span-full text-xl font-extrabold text-gray-700 mb-2 flex items-center gap-2">
-            <FileText size={24} className="text-blue-600" />
-            Main Topics and Ideas
-          </h2>
-          {getTopics(interviewType).map((topic, index) => (
-            <div 
-              key={index}
-              className="bg-white p-4 rounded-lg shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center gap-2 text-gray-700">
-                <div className="h-2 w-2 rounded-full bg-blue-500" />
-                {topic}
+        <div className="flex gap-8">
+          {/* Left Column - Topics */}
+          <div className="w-80 flex-shrink-0">
+            <div className="sticky top-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText size={24} className="text-blue-600" />
+                Main Topics and Ideas
+              </h2>
+              <div className="space-y-3">
+                {getTopics(interviewType).map((topic, index) => (
+                  <div 
+                    key={index}
+                    className="bg-white p-4 rounded-lg border border-gray-100"
+                  >
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                      {topic}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Interview Controls */}
-        <div className="flex flex-col items-center justify-center gap-8">
-          {!isConnected ? (
-            <button
-              onClick={connectConversation}
-              className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
-            >
-              <Play size={24} />
-              Start Interview
-            </button>
-          ) : (
-            <button
-              onClick={disconnectConversation}
-              className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
-            >
-              <X size={24} />
-              End Interview
-            </button>
-          )}
+          {/* Center Column - Main Content */}
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
+            {/* Title Section */}
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-semibold text-gray-900 mb-4">
+                {interviewType.toUpperCase()} INTERVIEW
+              </h1>
+            </div>
 
-          {/* Visualization */}
-          <div className="w-full max-w-2xl bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="visualization-entry">
-              <canvas ref={clientCanvasRef} />
+            {/* Interview Controls and Visualization */}
+            <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
+              {!isConnected ? (
+                <button
+                  onClick={connectConversation}
+                  className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
+                >
+                  <Play size={24} />
+                  Start Interview
+                </button>
+              ) : (
+                <button
+                  onClick={disconnectConversation}
+                  className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
+                >
+                  <X size={24} />
+                  End Interview
+                </button>
+              )}
+
+              {/* Visualization */}
+              <div className="w-full bg-white rounded-xl border border-gray-100 p-6">
+                <div className="visualization-entry">
+                  <canvas ref={clientCanvasRef} />
+                </div>
+              </div>
             </div>
           </div>
         </div>

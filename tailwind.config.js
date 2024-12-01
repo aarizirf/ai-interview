@@ -14,6 +14,9 @@ module.exports = {
           '100%': { opacity: '1', transform: 'translateY(0)' }
         }
       },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
+      },
     },
   },
   plugins: [],
