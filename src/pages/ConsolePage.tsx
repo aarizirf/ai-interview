@@ -441,7 +441,6 @@ export function ConsolePage() {
             </div>
           </div>
 
-<<<<<<< Updated upstream
           {/* Center Column - Main Content */}
           <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
             {/* Title Section */}
@@ -450,38 +449,12 @@ export function ConsolePage() {
                 {interviewType.toUpperCase()} INTERVIEW
               </h1>
             </div>
-=======
-        {/* Interview Controls */}
-        <div className="flex flex-col items-center justify-center gap-8">
-          {!isConnected ? (
-            <button
-              onClick={handleConnectWebSocket}
-              className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
-            >
-              <Play size={24} />
-              Start Interview
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                if (socket) {
-                  socket.close();
-                  setIsConnected(false);
-                }
-              }}
-              className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
-            >
-              <X size={24} />
-              End Interview
-            </button>
-          )}
->>>>>>> Stashed changes
 
             {/* Interview Controls and Visualization */}
             <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
               {!isConnected ? (
                 <button
-                  onClick={connectConversation}
+                  onClick={handleConnectWebSocket}
                   className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
                 >
                   <Play size={24} />
@@ -489,7 +462,12 @@ export function ConsolePage() {
                 </button>
               ) : (
                 <button
-                  onClick={disconnectConversation}
+                  onClick={() => {
+                    if (socket) {
+                      socket.close();
+                      setIsConnected(false);
+                    }
+                  }}
                   className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
                 >
                   <X size={24} />
