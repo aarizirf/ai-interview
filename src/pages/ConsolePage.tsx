@@ -187,7 +187,11 @@ export function ConsolePage() {
       interviewType === 'accounting' ? accountingInstructions :
       mergerModelInstructions;
 
-    const serverUrl = "ws://ec2-44-243-94-75.us-west-2.compute.amazonaws.com";
+    let serverUrl = "wss://ws1.aarizirfan.com";
+
+    if(window.location.hostname === 'localhost') {
+      // serverUrl = "ws://localhost:8080";
+    }
     const newSocket = new WebSocket(serverUrl);
 
     let sent = 0;
@@ -236,7 +240,6 @@ export function ConsolePage() {
 
         const wavStreamPlayer = wavStreamPlayerRef.current;
         wavStreamPlayer.add16BitPCM(buf, "");
-
       }
     }
     
