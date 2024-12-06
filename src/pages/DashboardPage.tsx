@@ -2,10 +2,11 @@ import { useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebase';
 import { useState, useEffect } from 'react';
 import { BookOpen, MessageCircle, TrendingUp, DollarSign, PieChart, BarChart, Activity, FileText } from 'react-feather';
+import { navigateToInterview } from '../utils/navigation';
+import { InterviewType } from '../utils/types';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('investment-banking');
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
@@ -70,7 +71,7 @@ const DashboardPage = () => {
           {/* Large Feature Card - Q&A */}
           <div className="md:col-span-2">
             <button
-              onClick={() => navigate('/console', { state: { type: 'qa' }})}
+              onClick={() => navigateToInterview(navigate, { type: InterviewType.General })}
               className="w-full text-left p-8 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
             >
               <div className="flex items-start gap-8">
@@ -89,7 +90,7 @@ const DashboardPage = () => {
 
           {/* Regular Cards */}
           <button
-            onClick={() => navigate('/console', { state: { type: 'lbo' }})}
+            onClick={() => navigateToInterview(navigate, { type: InterviewType.LBO })}
             className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-3">
@@ -100,7 +101,7 @@ const DashboardPage = () => {
           </button>
           
           <button
-            onClick={() => navigate('/console', { state: { type: 'dcf' }})}
+            onClick={() => navigateToInterview(navigate, { type: InterviewType.DCF })}
             className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
@@ -111,7 +112,7 @@ const DashboardPage = () => {
           </button>
           
           <button
-            onClick={() => navigate('/console', { state: { type: 'valuation' }})}
+            onClick={() => navigateToInterview(navigate, { type: InterviewType.Valuation })}
             className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
@@ -122,7 +123,7 @@ const DashboardPage = () => {
           </button>
           
           <button
-            onClick={() => navigate('/console', { state: { type: 'enterprise' }})}
+            onClick={() => navigateToInterview(navigate, { type: InterviewType.Enterprise })}
             className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
@@ -133,7 +134,7 @@ const DashboardPage = () => {
           </button>
           
           <button
-            onClick={() => navigate('/console', { state: { type: 'accounting' }})}
+            onClick={() => navigateToInterview(navigate, { type: InterviewType.Accounting })}
             className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
@@ -145,7 +146,7 @@ const DashboardPage = () => {
 
           {/* Merger Model Card - Moved to last position */}
           <button
-            onClick={() => navigate('/console', { state: { type: 'merger' }})}
+            onClick={() => navigateToInterview(navigate, { type: InterviewType.Merger })}
             className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-3">

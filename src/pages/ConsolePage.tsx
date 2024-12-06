@@ -28,9 +28,11 @@ import {
 import { WavRenderer } from '../utils/wav_renderer';
 
 import { X, Play, ArrowLeft, FileText } from 'react-feather';
-import { Toggle } from '../components/toggle/Toggle';
 
 import './ConsolePage.scss';
+import { MessageType, InterviewType } from '../utils/types';
+import { getTopics } from '../utils/topics';
+import { getInstructions } from '../utils/instructions/helper';
 
 /**
  * Type for all event logs
@@ -42,68 +44,14 @@ interface RealtimeEvent {
   event: { [key: string]: any };
 }
 
-
-// Add this helper function to get topics based on interview type
-const getTopics = (type: string) => {
-  switch(type) {
-    case 'merger':
-      return [
-        'Accretion/Dilution Analysis',
-        'Deal Structures',
-        'Synergy Valuation',
-        'Purchase Price Allocation',
-        'Transaction Impact'
-      ];
-    case 'lbo':
-      return [
-        'Leverage Analysis',
-        'Debt Structuring',
-        'Returns Modeling',
-        'Exit Strategies',
-        'PE Investment Criteria'
-      ];
-    case 'dcf':
-      return [
-        'Free Cash Flow Projections',
-        'WACC Calculation',
-        'Terminal Value Analysis',
-        'Growth Rate Assumptions',
-        'Sensitivity Analysis'
-      ];
-    case 'valuation':
-      return [
-        'Trading Comparables',
-        'Precedent Transactions',
-        'Public Company Analysis',
-        'Industry Multiples',
-        'Private Company Valuation'
-      ];
-    case 'enterprise':
-      return [
-        'Enterprise vs Equity Value',
-        'Diluted Share Calculations',
-        'Treatment of Debt & Cash',
-        'Minority Interest',
-        'Convertible Securities'
-      ];
-    case 'accounting':
-      return [
-        'Financial Statements',
-        'Working Capital Analysis',
-        'Cash vs Accrual',
-        'GAAP vs Non-GAAP',
-        'Balance Sheet Impact'
-      ];
-    default:
-      return [];
-  }
-};
-
 export function ConsolePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const interviewType = location.state?.type || 'interview'; // fallback if no type
+  const interviewType = location.state?.type || InterviewType.General; // fallback if no type
   const [socket, setSocket] = useState<WebSocket | null>(null);
+
+  const currentInstructions = getInstructions(interviewType);
+  console.log("Current Instructions", currentInstructions);
 
   /**
    * Instantiate:
@@ -125,24 +73,16 @@ export function ConsolePage() {
    */
   const clientCanvasRef = useRef<HTMLCanvasElement>(null);
   const serverCanvasRef = useRef<HTMLCanvasElement>(null);
-  const eventsScrollHeightRef = useRef(0);
-  const eventsScrollRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<string>(new Date().toISOString());
 
   /**
    * All of our variables for displaying application state
    * - items are all conversation items (dialog)
    * - realtimeEvents are event logs, which can be expanded
-   * - memoryKv is for set_memory() function
    */
-  const [items, setItems] = useState<ItemType[]>([]);
-  const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [canPushToTalk, setCanPushToTalk] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
-  const [questionCount, setQuestionCount] = useState(0);
-  const MAX_QUESTIONS = 3; // Change to 10 when ready
 
   /**
    * Utility for formatting the timing of logs
@@ -165,41 +105,33 @@ export function ConsolePage() {
     return `${pad(m)}:${pad(s)}.${pad(hs)}`;
   }, []);
 
-  
-  const handleChangeVoice = () => {
-    const obj = {
-      type: "change-voice"
-    }
+  const sendSocket = (type: MessageType, payload: Object) => {
     if (socket) {
-      socket.send(JSON.stringify(obj));
-      console.log("Voice changed", obj);
+      const message = {
+        type,
+        payload
+      };
+      socket.send(JSON.stringify(message));
+      console.log(`Sent ${type} message:`, message);
+    } else {
+      console.warn('Socket not connected');
     }
   };
 
   /* Connect Web Socket Fn */
   async function handleConnectWebSocket(){
-    const currentInstructions = 
-      interviewType === 'merger' ? mergerModelInstructions :
-      interviewType === 'lbo' ? lboInstructions :
-      interviewType === 'dcf' ? dcfInstructions :
-      interviewType === 'valuation' ? valuationInstructions :
-      interviewType === 'enterprise' ? enterpriseValueInstructions :
-      interviewType === 'accounting' ? accountingInstructions :
-      mergerModelInstructions;
 
     let serverUrl = "wss://ws1.aarizirfan.com";
 
     if(window.location.hostname === 'localhost') {
-      // serverUrl = "ws://localhost:8080";
+      serverUrl = "ws://localhost:8080";
     }
     const newSocket = new WebSocket(serverUrl);
 
-    let sent = 0;
-
     newSocket.onopen = async () => {
-      console.log("Connected to socket");
-      setIsConnected(true);
-
+      console.log("Connected to socket, sending instructions", currentInstructions);
+      sendSocket(MessageType.SendUserMessage, currentInstructions);
+      
       const wavStreamPlayer = wavStreamPlayerRef.current;
       const wavRecorder = wavRecorderRef.current;
 
@@ -231,8 +163,10 @@ export function ConsolePage() {
     async function handleMessage(event: MessageEvent) {
       if(typeof event.data === "string") {
         const obj = JSON.parse(event.data);
-        if(obj.type === "interrupt") {
-          wavStreamPlayerRef.current.interrupt();
+        switch(obj.type) {
+          case "interrupt":
+            wavStreamPlayerRef.current.interrupt();
+            break;
         }
       } else {
         // Handling audio blob
