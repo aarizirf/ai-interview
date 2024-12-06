@@ -257,6 +257,7 @@ export function ConsolePage() {
   }, []);
 
   const handleBackToDashboard = async () => {
+    console.log("Back button clicked");
     if (socket) {
       socket.close();
     }
@@ -284,81 +285,64 @@ export function ConsolePage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Left Column - Topics */}
-          <div className="w-80 flex-shrink-0">
-            <div className="sticky top-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText size={24} className="text-blue-600" />
-                Main Topics and Ideas
-              </h2>
-              <div className="space-y-3">
+      <div className="flex-1 flex items-center justify-center">
+        <div className="max-w-3xl w-full px-8">
+          {/* Interview Controls and Visualization */}
+          <div className="flex flex-col items-center gap-12 w-full max-w-md mx-auto">
+            <div className="text-center">
+              <h1 className="text-4xl font-semibold text-gray-900 mb-4">
+                {getInterviewTitle(interviewType)}
+              </h1>
+              <div className="flex flex-wrap justify-center gap-2">
                 {getTopics(interviewType).map((topic, index) => (
-                  <div 
+                  <div
                     key={index}
-                    className="bg-white p-4 rounded-lg border border-gray-100"
+                    className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-100 hover:bg-blue-100 transition-colors"
                   >
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <div className="h-2 w-2 rounded-full bg-blue-500" />
-                      {topic}
-                    </div>
+                    {topic}
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Center Column - Main Content */}
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
-            {/* Title Section */}
-            <div className="text-center mb-12">
-              <h1 className="text-4xl font-light text-gray-900 mb-4">
-                {getInterviewTitle(interviewType)}
-              </h1>
+            
+            {/* Visualization */}
+            <div className="w-full h-24 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <canvas ref={clientCanvasRef} className="w-full h-full" />
             </div>
 
-            {/* Interview Controls and Visualization */}
-            <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
-              {!isConnected ? (
-                <button
-                  onClick={handleConnectWebSocket}
-                  className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
-                >
-                  <Play size={24} />
-                  Start Interview
-                </button>
-              ) : !isReadyForInterview ? (
-                <button
-                  disabled
-                  className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-400 text-white font-medium text-lg cursor-not-allowed gap-2"
-                >
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Loading...
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    if (socket) {
-                      socket.close();
-                      setIsConnected(false);
-                    }
-                  }}
-                  className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
-                >
-                  <X size={24} />
-                  End Interview
-                </button>
-              )}
-
-              {/* Visualization */}
-              <div className="visualization-entry">
-                <canvas ref={clientCanvasRef} />
-              </div>
-            </div>
+            {!isConnected ? (
+              <button
+                onClick={handleConnectWebSocket}
+                className="w-full inline-flex justify-center items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all hover:scale-105 duration-200 gap-3"
+              >
+                <Play size={24} />
+                Start Interview
+              </button>
+            ) : !isReadyForInterview ? (
+              <button
+                disabled
+                className="w-full inline-flex justify-center items-center px-8 py-4 rounded-lg bg-gray-400 text-white font-semibold text-lg cursor-not-allowed gap-3"
+              >
+                <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading...
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (socket) {
+                    socket.close();
+                    setIsConnected(false);
+                  }
+                }}
+                className="w-full inline-flex justify-center items-center px-8 py-4 rounded-lg bg-gray-900 text-white font-semibold text-lg hover:bg-gray-800 transition-all hover:scale-105 duration-200 gap-3"
+              >
+                <X size={24} />
+                End Interview
+              </button>
+            )}
           </div>
         </div>
       </div>
