@@ -1,7 +1,8 @@
 export enum MessageType {
   SendUserMessage = "send-user-message",
-  ChangeVoice = "change-voice", 
-  ChangeSpeed = "change-speed",
+  ClientReady = "client-ready",
+  ServerReady = "server-ready",
+  Interrupt = "interrupt",
   GetTranscript = "get-transcript"
 }
 

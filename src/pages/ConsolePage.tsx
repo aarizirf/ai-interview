@@ -14,17 +14,7 @@ const LOCAL_RELAY_SERVER_URL: string =
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-import { RealtimeClient } from '@openai/realtime-api-beta';
-import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
-import { 
-  mergerModelInstructions, 
-  lboInstructions, 
-  dcfInstructions, 
-  valuationInstructions, 
-  enterpriseValueInstructions, 
-  accountingInstructions 
-} from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
 import { X, Play, ArrowLeft, FileText } from 'react-feather';
@@ -33,16 +23,6 @@ import './ConsolePage.scss';
 import { MessageType, InterviewType } from '../utils/types';
 import { getTopics } from '../utils/topics';
 import { getInstructions } from '../utils/instructions/helper';
-
-/**
- * Type for all event logs
- */
-interface RealtimeEvent {
-  time: string;
-  source: 'client' | 'server';
-  count?: number;
-  event: { [key: string]: any };
-}
 
 const getInterviewTitle = (type: InterviewType): string => {
   switch(type) {
@@ -71,8 +51,6 @@ export function ConsolePage() {
   const interviewType = location.state?.type || InterviewType.General; // fallback if no type
   const [socket, setSocket] = useState<WebSocket | null>(null);
 
-  const currentInstructions = getInstructions(interviewType);
-
   /**
    * Instantiate:
    * - WavRecorder (speech input)
@@ -100,7 +78,17 @@ export function ConsolePage() {
    * - realtimeEvents are event logs, which can be expanded
    */
   const [isConnected, setIsConnected] = useState(false);
-  const [isReadyForInterview, setIsReadyForInterview] = useState(false);
+  const [isServerReady, setIsServerReady] = useState(false);
+  const [isClientReady, setIsClientReady] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState<string>('nova');
+  const [conversationTone, setConversationTone] = useState<string>('Professional');
+  const [voiceSpeed, setVoiceSpeed] = useState<string>('Normal');
+
+  useEffect(() => {
+    if(!isConnected) {
+      handleConnectWebSocket();
+    }
+  }, []);
 
   /* Connect Web Socket Fn */
   async function handleConnectWebSocket(){
@@ -108,7 +96,7 @@ export function ConsolePage() {
 
     if(window.location.hostname === 'localhost') {
       console.log("Running locally");
-      // serverUrl = "ws://localhost:8080";
+      serverUrl = "ws://localhost:8080";
     }
 
     const newSocket = new WebSocket(serverUrl);
@@ -116,11 +104,6 @@ export function ConsolePage() {
     newSocket.onopen = async () => {
       console.log("Connected to server");
       setIsConnected(true);
-
-      newSocket.send(JSON.stringify({
-        type: "send-user-message",
-        instructions: currentInstructions
-      }))
     };
 
     newSocket.onclose = async () => {
@@ -140,43 +123,39 @@ export function ConsolePage() {
 
   /* Handling Web Socket Media Event */
   useEffect(() => {
-    async function handleMessage(event: MessageEvent) {
-      console.log("Received message from server", typeof event.data);
-      console.log("is ready for interview", isReadyForInterview);
+    let timeoutId: NodeJS.Timeout;
 
-      if(typeof event.data === "string") {
-        const obj = JSON.parse(event.data);
-        console.log("Received message from server", obj);
-        switch(obj.type) {
-          case "interrupt":
-            wavStreamPlayerRef.current.interrupt();
-            break;
-          case "ready-for-interview":
+    async function handleMessage(event: MessageEvent) {
+      if(typeof event.data !== "string") {
+        // Handling audio blob
+        const buf = await event.data.arrayBuffer();
+        const wavStreamPlayer = wavStreamPlayerRef.current;
+        wavStreamPlayer.add16BitPCM(buf, "");
+      } else if(typeof event.data === "string") {
+        const res = JSON.parse(event.data);
+        switch(res.type) {
+          case MessageType.ServerReady:
             const wavStreamPlayer = wavStreamPlayerRef.current;
             const wavRecorder = wavRecorderRef.current;
 
             await wavStreamPlayer.connect();
             await wavRecorder.begin();
 
-            setIsReadyForInterview(true);
+            setIsServerReady(true);
 
             if (socket) {
-              await wavRecorder.record((data) => {
-                socket.send(data.mono)
-                console.log("Sending audio data to server");
-              });
+              // timeoutId = setTimeout( () => {
+                await wavRecorder.record((data) => {
+                  socket.send(data.mono)
+                });
+              // }, 2000);
             }
-            break;
-          default:
-            console.log("Received unknown message from server", obj);
-        }
-      } else if (isReadyForInterview) {
-        // Handling audio blob
-        const buf = await event.data.arrayBuffer();
-        console.log("PLAYING 16 BIT PCM");
 
-        const wavStreamPlayer = wavStreamPlayerRef.current;
-        wavStreamPlayer.add16BitPCM(buf, "");
+            break;
+          case MessageType.Interrupt:
+            wavStreamPlayerRef.current.interrupt();
+            break;
+        }
       }
     }
     
@@ -188,8 +167,9 @@ export function ConsolePage() {
       if (socket) {
         socket.onmessage = null;
       }
+      clearTimeout(timeoutId);
     };
-  }, [socket, isReadyForInterview]);
+  }, [socket, isServerReady]);
 
 
   /**
@@ -197,6 +177,10 @@ export function ConsolePage() {
    */
   useEffect(() => {
     let isLoaded = true;
+
+    if(!isServerReady) {
+      return;
+    }
 
     const wavRecorder = wavRecorderRef.current;
     const clientCanvas = clientCanvasRef.current;
@@ -216,35 +200,23 @@ export function ConsolePage() {
           clientCtx = clientCtx || clientCanvas.getContext('2d');
           if (clientCtx) {
             clientCtx.clearRect(0, 0, clientCanvas.width, clientCanvas.height);
-            const result = wavRecorder.recording
+            const clientResult = wavRecorder.recording
               ? wavRecorder.getFrequencies('voice')
               : { values: new Float32Array([0]) };
+
+            const serverResult = wavStreamPlayer.analyser
+              ? wavStreamPlayer.getFrequencies('voice')
+              : { values: new Float32Array([0]) };
+
+            let result: Float32Array = new Float32Array(serverResult.values.length);
+
+            serverResult.values.forEach((value, index) => {
+              result[index] = (value + clientResult.values[index]);
+            });
             WavRenderer.drawBars(
               clientCanvas,
               clientCtx,
-              result.values,
-              '#000000',
-              50,
-              10,
-              5
-            );
-          }
-        }
-        if (serverCanvas) {
-          if (!serverCanvas.width || !serverCanvas.height) {
-            serverCanvas.width = serverCanvas.offsetWidth;
-            serverCanvas.height = serverCanvas.offsetHeight;
-          }
-          serverCtx = serverCtx || serverCanvas.getContext('2d');
-          if (serverCtx) {
-            serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
-            const result = wavStreamPlayer.analyser
-              ? wavStreamPlayer.getFrequencies('voice')
-              : { values: new Float32Array([0]) };
-            WavRenderer.drawBars(
-              serverCanvas,
-              serverCtx,
-              result.values,
+              result,
               '#009900',
               50,
               0,
@@ -255,23 +227,53 @@ export function ConsolePage() {
         window.requestAnimationFrame(render);
       }
     };
+
     render();
 
     return () => {
       isLoaded = false;
     };
-  }, []);
+  }, [isServerReady]);
 
   const handleBackToDashboard = async () => {
     if (socket) {
       socket.close();
     }
+
     navigate('/dashboard');
   };
+
+  
+
+  const handleClientReady = () => {
+    setIsClientReady(true);
+
+    if (socket) {
+      const payload = {
+        type: MessageType.ClientReady,
+        instructions: getInstructions(interviewType, conversationTone, voiceSpeed),
+        voice: selectedVoice,
+      }
+      console.log(payload);
+      socket.send(JSON.stringify(payload));
+    }
+  }
+
+  const handleEndInterview = async () => {
+    if (socket) {
+      socket.close();
+      // setIsConnected(false);
+    }
+  }
 
   /**
    * Render the application
    */
+  if(!isConnected) {
+    return <div className="min-h-screen flex flex-col items-center justify-center">Connecting to server...</div>;
+  }
+
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -316,25 +318,90 @@ export function ConsolePage() {
           </div>
 
           {/* Center Column - Main Content */}
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="flex-1 flex flex-col items-center justify-center">
             {/* Title Section */}
-            <div className="text-center mb-12">
-              <h1 className="text-4xl font-light text-gray-900 mb-4">
+            <div className="mb-12">
+              <h1 className="text-4xl font-semibold text-gray-900 mb-4">
                 {getInterviewTitle(interviewType)}
               </h1>
             </div>
 
+            
+
             {/* Interview Controls and Visualization */}
             <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
-              {!isConnected ? (
+              {!isClientReady ? (
+                <div>
+            <div className="w-full max-w-md mb-12 space-y-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="voice-select" className="text-sm font-medium text-gray-700">
+                  Select Voice
+                </label>
+                <select
+                  id="voice-select"
+                  className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                  onChange={(e) => {
+                    setSelectedVoice(e.target.value);
+                  }}
+                  value={selectedVoice}
+                >
+                  {['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'].map((voice) => (
+                    <option key={voice} value={voice}>
+                      {voice.charAt(0).toUpperCase() + voice.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor="tone-select" className="text-sm font-medium text-gray-700">
+                  Conversation Tone
+                </label>
+                <select
+                  id="tone-select"
+                  className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                  onChange={(e) => {
+                    setConversationTone(e.target.value);
+                  }}
+                  value={conversationTone}
+                >
+                  {['Professional', 'Warm', 'Helpful'].map((tone) => (
+                    <option key={tone} value={tone}>
+                      {tone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor="speed-select" className="text-sm font-medium text-gray-700">
+                  Voice Speed
+                </label>
+                <select
+                  id="tone-select"
+                  className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                  onChange={(e) => {
+                    setVoiceSpeed(e.target.value);
+                  }}
+                  value={voiceSpeed}
+                >
+                  {['Slow', 'Normal', 'Fast'].map((speed) => (
+                    <option key={speed} value={speed}>
+                      {speed}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              </div>  
                 <button
-                  onClick={handleConnectWebSocket}
+                  onClick={() => {handleClientReady()}}
                   className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
                 >
                   <Play size={24} />
                   Start Interview
                 </button>
-              ) : !isReadyForInterview ? (
+                </div>
+              ) : !isServerReady ? (
                 <button
                   disabled
                   className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-400 text-white font-medium text-lg cursor-not-allowed gap-2"
@@ -346,24 +413,22 @@ export function ConsolePage() {
                   Loading...
                 </button>
               ) : (
-                <button
-                  onClick={() => {
-                    if (socket) {
-                      socket.close();
-                      setIsConnected(false);
-                    }
-                  }}
-                  className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
-                >
-                  <X size={24} />
-                  End Interview
-                </button>
+                <>
+                  <button
+                    onClick={() => {handleEndInterview()}}
+                    className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
+                  >
+                    <X size={24} />
+                    End Interview
+                  </button>
+                  {/* Visualization */}
+                  <div className="visualization-entry">
+                    <canvas ref={clientCanvasRef} />
+                    {/* <canvas ref={serverCanvasRef} /> */}
+                  </div>
+                </>
               )}
-
-              {/* Visualization */}
-              <div className="visualization-entry">
-                <canvas ref={clientCanvasRef} />
-              </div>
+              
             </div>
           </div>
         </div>

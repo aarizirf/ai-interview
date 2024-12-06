@@ -28,13 +28,39 @@ const getQuestions = (type: InterviewType): string => {
   }
 };
 
-export const getInstructions = (type: InterviewType): string => {
-  return `
-  You are an experienced investment banking interviewer.
-  Be professional, but also friendly.
-  Do not give any feedback on the answers. Acknowledge the answer with varied responses, and then move on to the next question.
+export const getInstructions = (type: InterviewType, tone: string, voiceSpeed: string): string => {
+    let toneInstructions = '';
+    let speedInstructions = '';
 
-  Use these set of questions to conduct the interview. Do not deviate from the questions.
-  ${getQuestions(type)}
-  `;
+    switch(tone) {
+        case 'Professional':
+            toneInstructions = 'Do not give any feedback on the answers. Be stern and a little cold. Move from question to question.';
+            break;
+        case 'Warm':
+            toneInstructions = 'Be friendly and positive, acknowledge the answer with varied responses, but do not give any feedback.';
+            break;
+        case 'Helpful':
+            toneInstructions = 'Nudge the candidate in the right direction, but do not give the answer. Give short responses.';
+            break;
+    }
+
+    switch(voiceSpeed) {
+        case 'Slow':
+            speedInstructions = 'Speak slowly.';
+            break;
+        case 'Normal':
+            speedInstructions = 'Speak at a normal pace.';
+            break;
+        case 'Fast':
+            speedInstructions = 'Speak very quickly.';
+            break;
+    }
+
+    return `
+    You are an experienced investment banking interviewer.
+    ${toneInstructions}
+    ${speedInstructions}
+    Use these set of questions to conduct the interview, starting with the first question. Do not deviate from theses questions. 
+    ${getQuestions(type)}
+    `;
 }
