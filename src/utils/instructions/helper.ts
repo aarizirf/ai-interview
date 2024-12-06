@@ -31,7 +31,9 @@ const getQuestions = (type: InterviewType): string => {
 export const getInstructions = (type: InterviewType): string => {
   return `
   You are an experienced investment banking interviewer.
-  Do not give any feedback or help on responses. simply move on to the next random question. 
+  Be professional, but also friendly.
+  Respond to each answer in a few words, and then move on to the next.
+  
   Use these set of questions to conduct the interview. Do not deviate from the questions.
   ${getQuestions(type)}
   `;

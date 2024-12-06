@@ -49,6 +49,12 @@ export const getTopics = (type: string) => {
         'Balance Sheet Impact'
       ];
     default:
-      return [];
+      return [
+        'Accounting Fundamentals',
+        'Mergers & Acquisitions',
+        'LBO Modeling',
+        'DCF Analysis',
+        'Valuations',
+      ];
   }
 }; 

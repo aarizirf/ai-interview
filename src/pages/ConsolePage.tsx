@@ -44,6 +44,27 @@ interface RealtimeEvent {
   event: { [key: string]: any };
 }
 
+const getInterviewTitle = (type: InterviewType): string => {
+  switch(type) {
+    case InterviewType.Merger:
+      return "M&A Technical Interview";
+    case InterviewType.LBO:
+      return "LBO Modeling Interview";
+    case InterviewType.DCF:
+      return "DCF Valuation Interview";
+    case InterviewType.Valuation:
+      return "Company Valuation Interview";
+    case InterviewType.Enterprise:
+      return "Enterprise Value Interview";
+    case InterviewType.Accounting:
+      return "Financial Accounting Interview";
+    case InterviewType.General:
+      return "Investment Banking Interview";
+    default:
+      return "Technical Interview";
+  }
+};
+
 export function ConsolePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,7 +72,6 @@ export function ConsolePage() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
 
   const currentInstructions = getInstructions(interviewType);
-  console.log("Current Instructions", currentInstructions);
 
   /**
    * Instantiate:
@@ -73,7 +93,6 @@ export function ConsolePage() {
    */
   const clientCanvasRef = useRef<HTMLCanvasElement>(null);
   const serverCanvasRef = useRef<HTMLCanvasElement>(null);
-  const startTimeRef = useRef<string>(new Date().toISOString());
 
   /**
    * All of our variables for displaying application state
@@ -81,70 +100,31 @@ export function ConsolePage() {
    * - realtimeEvents are event logs, which can be expanded
    */
   const [isConnected, setIsConnected] = useState(false);
-  const [canPushToTalk, setCanPushToTalk] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-
-  /**
-   * Utility for formatting the timing of logs
-   */
-  const formatTime = useCallback((timestamp: string) => {
-    const startTime = startTimeRef.current;
-    const t0 = new Date(startTime).valueOf();
-    const t1 = new Date(timestamp).valueOf();
-    const delta = t1 - t0;
-    const hs = Math.floor(delta / 10) % 100;
-    const s = Math.floor(delta / 1000) % 60;
-    const m = Math.floor(delta / 60_000) % 60;
-    const pad = (n: number) => {
-      let s = n + '';
-      while (s.length < 2) {
-        s = '0' + s;
-      }
-      return s;
-    };
-    return `${pad(m)}:${pad(s)}.${pad(hs)}`;
-  }, []);
-
-  const sendSocket = (type: MessageType, payload: Object) => {
-    if (socket) {
-      const message = {
-        type,
-        payload
-      };
-      socket.send(JSON.stringify(message));
-      console.log(`Sent ${type} message:`, message);
-    } else {
-      console.warn('Socket not connected');
-    }
-  };
+  const [isReadyForInterview, setIsReadyForInterview] = useState(false);
 
   /* Connect Web Socket Fn */
   async function handleConnectWebSocket(){
-
     let serverUrl = "wss://ws1.aarizirfan.com";
 
     if(window.location.hostname === 'localhost') {
+      console.log("Running locally");
       serverUrl = "ws://localhost:8080";
     }
+
     const newSocket = new WebSocket(serverUrl);
 
     newSocket.onopen = async () => {
-      console.log("Connected to socket, sending instructions", currentInstructions);
-      sendSocket(MessageType.SendUserMessage, currentInstructions);
-      
-      const wavStreamPlayer = wavStreamPlayerRef.current;
-      const wavRecorder = wavRecorderRef.current;
+      console.log("Connected to server");
+      setIsConnected(true);
 
-      await wavStreamPlayer.connect();
-      await wavRecorder.begin();
-
-      await wavRecorder.record((data) => {
-        newSocket.send(data.mono)
-      });
+      newSocket.send(JSON.stringify({
+        type: "send-user-message",
+        instructions: currentInstructions
+      }))
     };
 
     newSocket.onclose = async () => {
-      console.log("Disconnected");
+      setIsConnected(false);
 
       const wavStreamPlayer = wavStreamPlayerRef.current;
       await wavStreamPlayer.interrupt();
@@ -163,9 +143,26 @@ export function ConsolePage() {
     async function handleMessage(event: MessageEvent) {
       if(typeof event.data === "string") {
         const obj = JSON.parse(event.data);
+        console.log("Received message from server", obj);
         switch(obj.type) {
           case "interrupt":
             wavStreamPlayerRef.current.interrupt();
+            break;
+          case "ready-for-interview":
+            const wavStreamPlayer = wavStreamPlayerRef.current;
+            const wavRecorder = wavRecorderRef.current;
+
+            await wavStreamPlayer.connect();
+            await wavRecorder.begin();
+
+            setIsReadyForInterview(true);
+
+            if (socket) {
+              await wavRecorder.record((data) => {
+                socket.send(data.mono)
+                console.log("Sending audio data to server");
+              });
+            }
             break;
         }
       } else {
@@ -187,58 +184,6 @@ export function ConsolePage() {
       }
     };
   }, [socket]);
-
-  /**
-   * Connect to conversation:
-   * WavRecorder taks speech input, WavStreamPlayer output, client is API client
-   */
-  
-
-  // /**
-  //  * In push-to-talk mode, start recording
-  //  * .appendInputAudio() for each sample
-  //  */
-  // const startRecording = async () => {
-  //   setIsRecording(true);
-  //   const client = clientRef.current;
-  //   const wavRecorder = wavRecorderRef.current;
-  //   const wavStreamPlayer = wavStreamPlayerRef.current;
-  //   const trackSampleOffset = await wavStreamPlayer.interrupt();
-  //   if (trackSampleOffset?.trackId) {
-  //     const { trackId, offset } = trackSampleOffset;
-  //     await client.cancelResponse(trackId, offset);
-  //   }
-  //   await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-  // };
-
-  // /**
-  //  * In push-to-talk mode, stop recording
-  //  */
-  // const stopRecording = async () => {
-  //   setIsRecording(false);
-  //   const client = clientRef.current;
-  //   const wavRecorder = wavRecorderRef.current;
-  //   await wavRecorder.pause();
-  //   client.createResponse();
-  // };
-
-  // /**
-  //  * Switch between Manual <> VAD mode for communication
-  //  */
-  // const changeTurnEndType = async (value: string) => {
-  //   const client = clientRef.current;
-  //   const wavRecorder = wavRecorderRef.current;
-  //   if (value === 'none' && wavRecorder.getStatus() === 'recording') {
-  //     await wavRecorder.pause();
-  //   }
-  //   client.updateSession({
-  //     turn_detection: value === 'none' ? null : { type: 'server_vad' },
-  //   });
-  //   if (value === 'server_vad' && client.isConnected()) {
-  //     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-  //   }
-  //   setCanPushToTalk(value === 'none');
-  // };
 
 
   /**
@@ -311,23 +256,9 @@ export function ConsolePage() {
     };
   }, []);
 
-  /**
-   * Add this function near your other handlers
-   */
-  // const handleLeavePage = useCallback(async () => {
-  //   if (isConnected) {
-  //     await disconnectConversation();
-  //   }
-  // }, [isConnected, disconnectConversation]);
-
-  /**
-   * Modify the back button handler
-   */
   const handleBackToDashboard = async () => {
-    // await handleLeavePage();
     if (socket) {
       socket.close();
-      setIsConnected(false);
     }
     navigate('/dashboard');
   };
@@ -382,8 +313,8 @@ export function ConsolePage() {
           <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
             {/* Title Section */}
             <div className="text-center mb-12">
-              <h1 className="text-4xl font-semibold text-gray-900 mb-4">
-                {interviewType.toUpperCase()} INTERVIEW
+              <h1 className="text-4xl font-light text-gray-900 mb-4">
+                {getInterviewTitle(interviewType)}
               </h1>
             </div>
 
@@ -396,6 +327,17 @@ export function ConsolePage() {
                 >
                   <Play size={24} />
                   Start Interview
+                </button>
+              ) : !isReadyForInterview ? (
+                <button
+                  disabled
+                  className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-400 text-white font-medium text-lg cursor-not-allowed gap-2"
+                >
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading...
                 </button>
               ) : (
                 <button
@@ -413,10 +355,8 @@ export function ConsolePage() {
               )}
 
               {/* Visualization */}
-              <div className="w-full bg-white rounded-xl border border-gray-100 p-6">
-                <div className="visualization-entry">
-                  <canvas ref={clientCanvasRef} />
-                </div>
+              <div className="visualization-entry">
+                <canvas ref={clientCanvasRef} />
               </div>
             </div>
           </div>
