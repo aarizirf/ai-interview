@@ -108,7 +108,7 @@ export function ConsolePage() {
 
     if(window.location.hostname === 'localhost') {
       console.log("Running locally");
-      serverUrl = "ws://localhost:8080";
+      // serverUrl = "ws://localhost:8080";
     }
 
     const newSocket = new WebSocket(serverUrl);
@@ -141,6 +141,9 @@ export function ConsolePage() {
   /* Handling Web Socket Media Event */
   useEffect(() => {
     async function handleMessage(event: MessageEvent) {
+      console.log("Received message from server", typeof event.data);
+      console.log("is ready for interview", isReadyForInterview);
+
       if(typeof event.data === "string") {
         const obj = JSON.parse(event.data);
         console.log("Received message from server", obj);
@@ -164,10 +167,13 @@ export function ConsolePage() {
               });
             }
             break;
+          default:
+            console.log("Received unknown message from server", obj);
         }
-      } else {
+      } else if (isReadyForInterview) {
         // Handling audio blob
         const buf = await event.data.arrayBuffer();
+        console.log("PLAYING 16 BIT PCM");
 
         const wavStreamPlayer = wavStreamPlayerRef.current;
         wavStreamPlayer.add16BitPCM(buf, "");
@@ -183,7 +189,7 @@ export function ConsolePage() {
         socket.onmessage = null;
       }
     };
-  }, [socket]);
+  }, [socket, isReadyForInterview]);
 
 
   /**
