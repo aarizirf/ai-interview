@@ -22,7 +22,7 @@ import { X, Play, ArrowLeft, FileText } from 'react-feather';
 import './ConsolePage.scss';
 import { MessageType, InterviewType } from '../utils/types';
 import { getTopics } from '../utils/topics';
-import { getInstructions } from '../utils/instructions/helper';
+import { getInstructions, getQuestions } from '../utils/instructions/helper';
 
 const getInterviewTitle = (type: InterviewType): string => {
   switch(type) {
@@ -80,11 +80,13 @@ export function ConsolePage() {
   const [isConnected, setIsConnected] = useState(false);
   const [isServerReady, setIsServerReady] = useState(false);
   const [isClientReady, setIsClientReady] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState<string>('nova');
+  const [selectedVoice, setSelectedVoice] = useState<string>('alloy');
   const [conversationTone, setConversationTone] = useState<string>('Professional');
   const [voiceSpeed, setVoiceSpeed] = useState<string>('Normal');
+  const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
+    console.log("Do this once")
     if(!isConnected) {
       handleConnectWebSocket();
     }
@@ -154,6 +156,18 @@ export function ConsolePage() {
             break;
           case MessageType.Interrupt:
             wavStreamPlayerRef.current.interrupt();
+            break;
+          case MessageType.ItemsUpdated:
+            const newItems: any[] = [];
+            console.log("Items updated", res.items[res.items.length - 1]);
+            res.items.forEach((item: any) => {
+              newItems.push({
+                content: item.content[0].transcript,
+                role: item.role
+              });
+            });
+            setItems(newItems);
+
             break;
         }
       }
@@ -251,7 +265,7 @@ export function ConsolePage() {
     if (socket) {
       const payload = {
         type: MessageType.ClientReady,
-        instructions: getInstructions(interviewType, conversationTone, voiceSpeed),
+        instructions: getInstructions(getQuestions(interviewType), conversationTone, voiceSpeed),
         voice: selectedVoice,
       }
       console.log(payload);

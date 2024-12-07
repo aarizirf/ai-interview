@@ -3,7 +3,7 @@ export enum MessageType {
   ClientReady = "client-ready",
   ServerReady = "server-ready",
   Interrupt = "interrupt",
-  GetTranscript = "get-transcript"
+  ItemsUpdated = "items-updated"
 }
 
 export enum InterviewType {
