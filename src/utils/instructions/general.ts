@@ -6,7 +6,7 @@ import { questions as evInstructions } from './ev';
 import { questions as accountingInstructions } from './accounting';
 
 export const questions = `
-This is a general interview. Use any of the following questions to conduct the interview. Skip around.
+This is a general interview. Use any of the following questions to conduct the interview.
 ${mergerInstructions}
 
 ${lboInstructions}

@@ -1,8 +1,11 @@
 export enum MessageType {
   SendUserMessage = "send-user-message",
-  ChangeVoice = "change-voice", 
-  ChangeSpeed = "change-speed",
-  GetTranscript = "get-transcript"
+  ClientReady = "client-ready",
+  ServerReady = "server-ready",
+  Interrupt = "interrupt",
+  ItemsUpdated = "items-updated",
+  RequestingFeedback = "requesting-feedback",
+  FeedbackComplete = "feedback-complete"
 }
 
 export enum InterviewType {

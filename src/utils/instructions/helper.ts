@@ -7,7 +7,7 @@ import { questions as evInstructions } from './ev';
 import { questions as accountingInstructions } from './accounting';
 import { questions as generalInstructions } from './general';
 
-const getQuestions = (type: InterviewType): string => {
+export const getQuestions = (type: InterviewType): string => {
   switch(type) {
     case InterviewType.Merger:
       return mergerInstructions;
@@ -28,13 +28,42 @@ const getQuestions = (type: InterviewType): string => {
   }
 };
 
-export const getInstructions = (type: InterviewType): string => {
-  return `
-  You are an experienced investment banking interviewer.
-  Be professional, but also friendly.
-  Respond to each answer in a few words, and then move on to the next.
-  
-  Use these set of questions to conduct the interview. Do not deviate from the questions.
-  ${getQuestions(type)}
-  `;
+export const getInstructions = (questions: string, tone: string, voiceSpeed: string): string => {
+    let toneInstructions = '';
+    let speedInstructions = '';
+
+    switch(tone) {
+        case 'Professional':
+            toneInstructions = 'Do not give any feedback on the answers. Be stern and a little cold.';
+            break;
+        case 'Warm':
+            toneInstructions = 'Be friendly, but do not give any feedback.';
+            break;
+        case 'Helpful':
+            toneInstructions = 'Nudge the candidate in the right direction, but do not give the answer. Give short responses.';
+            break;
+    }
+
+    switch(voiceSpeed) {
+        case 'Slow':
+            speedInstructions = 'Speak very, very slowly.';
+            break;
+        case 'Normal':
+            speedInstructions = 'Speak at a normal pace.';
+            break;
+        case 'Fast':
+            speedInstructions = 'Speak very quickly, and rush through your questions.';
+            break;
+    }
+
+    return `
+        You are an experienced investment banking interviewer.
+        Simulate an interview with me.
+        Do not deviate from these questions at all:
+        ${questions}
+
+
+        ${toneInstructions} ${speedInstructions}
+        Wait for my response before asking the next question. Randomize the order of the questions.
+    `;
 }
