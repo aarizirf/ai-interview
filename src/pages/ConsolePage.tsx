@@ -181,35 +181,15 @@ export function ConsolePage() {
               const role = item.role;
 
               if (role == lastRole) {
-                batchedItems[batchedItems.length - 1].content += content;
+                batchedItems[batchedItems.length - 1].content += '\n' + content;
               } else {
                 batchedItems.push({ content, role });
                 lastRole = role;
               }
             });
-            console.log(batchedItems);
+            console.log(batchedItems, res.items);
             setItems(batchedItems);
             break;
-
-            // const batchedItems = res.items.reduce((acc: Array<{ content: string, role: string }>, item: any) => {
-            //   const curr = {
-            //     content: item.content[0].transcript,
-            //     role: item.role
-            //   };
-            //   const lastItem = acc[acc.length - 1];
-            //   if (lastItem && lastItem.role === curr.role) {
-            //     lastItem.content += curr.content;
-            //     return acc;
-            //   }
-
-            //   else if (curr.content) {
-            //     acc.push({ ...curr });
-            //   }
-            //   return acc;
-            // }, [] as Array<{ content: string, role: string }>);
-            // console.log(batchedItems);
-            // setItems(batchedItems);
-            // break;
         }
       }
     }
@@ -347,8 +327,10 @@ export function ConsolePage() {
     
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
-    await wavRecorder.pause();
-    await wavStreamPlayer.interrupt();
+    if(isVad) {
+      await wavRecorder.pause();
+    }
+    wavStreamPlayer.interrupt();
 
     const payload = {
       type: MessageType.RequestingFeedback,
@@ -430,25 +412,18 @@ export function ConsolePage() {
             </h1>
           )}
 
-          <div className="w-full max-w-2xl mx-auto mt-8 bg-white overflow-hidden">
+          <div className="w-full max-w-2xl mx-auto mt-8 grid grid-cols-1 divide-y divide-gray-100">
 
             {items.map((item, index) => item.content && (
-              <div key={index} className={"mb-3 p-4 rounded-lg " + (item.role === 'assistant' ? 'bg-white' : 'border-2 border-gray-100 rounded-lg')}>
-                <div className="font-medium text-gray-700 mb-1 inline-block">
-                  {item.role === 'assistant' ? (
-                    <p className="text-xs uppercase font-bold text-gray-400">
-                      Interviewer
-                    </p>
-                  ) : (
-                    <div className="text-xs uppercase font-bold text-gray-400">
-                      You
-                    </div>
-                  )}
-                </div>
-                <div className={item.role === 'assistant' ? 'text-gray-500' : 'font-bold'}>
-                  {item.content && item.content != '\n' ? item.content : '(truncated)'}
-                </div>
-              </div>
+              <button key={index} className="py-4 px-2 hover:bg-gray-100 text-left" onClick={() => {
+                navigator.clipboard.writeText(item.content)
+              }}>
+                <p className="text-gray-700 font-mono text-sm">
+                  <strong>{item.role === 'assistant' ? 'Interviewer' : 'You'}: </strong>
+                  <span>{item.content ? item.content : '(truncated)'}</span>
+                </p>
+                
+              </button>
             ))}
 
           </div>
