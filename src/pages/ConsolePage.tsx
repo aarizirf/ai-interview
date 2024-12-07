@@ -354,9 +354,9 @@ export function ConsolePage() {
 
         <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 justify-center">
         {serverFeedback ? (
-          <div className="p-4 rounded-lg bg-gray-50 w-full max-w-2xl h-2/6 overflow-y-auto">
-            <h3 className="mb-4 font-bold text-gray-700">Our Feedback:</h3>
-            <div className="text-sm text-gray-50 prose prose-li:text-gray-700">
+          <div className="p-6 ring rounded-lg bg-blue-500 shadow-lg w-full max-w-2xl h-2/6 overflow-y-auto">
+            <h3 className="mb-4 font-bold text-white">Our Feedback:</h3>
+            <div className="text-sm text-gray-200">
               <Markdown options={{ forceBlock: true }}>{serverFeedback}</Markdown>
             </div>
           </div>
@@ -374,19 +374,19 @@ export function ConsolePage() {
         <div className="w-full max-w-2xl mx-auto mt-8 bg-white overflow-hidden">
 
             {items.map((item, index) => item.content &&(
-              <div key={index} className={"mb-6 p-4 rounded-lg " + (item.role === 'assistant' ? 'bg-white' : 'border-2 border-gray-100 rounded-lg')}>
+              <div key={index} className={"mb-3 p-4 rounded-lg " + (item.role === 'assistant' ? 'bg-white' : 'border-2 border-gray-100 rounded-lg')}>
                 <div className="font-medium text-gray-700 mb-1 inline-block">
                   {item.role === 'assistant' ? (
-                    <p className="text-sm uppercase font-bold text-gray-400">
+                    <p className="text-xs uppercase font-bold text-gray-400">
                       Interviewer
                     </p>
                   ) : (
-                    <div className="text-sm uppercase font-bold text-gray-400">
+                    <div className="text-xs uppercase font-bold text-gray-400">
                       You
                     </div>
                   )}
                 </div>
-                <div className="">
+                <div className={item.role === 'assistant' ? 'text-gray-500' : 'font-bold'}>
                   {item.content ? item.content : '(truncated)'}
                 </div>
               </div>
