@@ -15,7 +15,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Play, ArrowLeft, FileText } from 'react-feather';
+import { X, Play, ArrowLeft, FileText, Mic } from 'react-feather';
 
 import './ConsolePage.scss';
 import { MessageType, InterviewType } from '../utils/types';
@@ -86,6 +86,7 @@ export function ConsolePage() {
   const [voiceSpeed, setVoiceSpeed] = useState<string>('Normal');
   const [items, setItems] = useState<any[]>([]);
   const [serverFeedback, setServerFeedback] = useState<string | undefined>(undefined);
+  const [isVad, setIsVad] = useState<boolean>(true);
 
   useEffect(() => {
     console.log("Do this once")
@@ -112,20 +113,35 @@ export function ConsolePage() {
 
     newSocket.onclose = async () => {
       setIsConnected(false);
-
-      closeAudioHandlers();
     };
 
     setSocket(newSocket);
   }
 
+  useEffect(() => {
+    if (!(isClientReady && isServerReady)) return;
+    const wavRecorder = wavRecorderRef.current;
+
+    if (isVad) {
+      wavRecorder.record((data) => {
+        if (socket) {
+          socket.send(data.mono);
+        }
+      });
+    }
+
+    if (!isVad) {
+      wavRecorder.pause();
+    }
+  }, [isVad])
+
   const closeAudioHandlers = async () => {
     const wavStreamPlayer = wavStreamPlayerRef.current;
-    await wavStreamPlayer.interrupt();
+    wavStreamPlayer.interrupt();
 
     const wavRecorder = wavRecorderRef.current;
     if (wavRecorder) {
-      await wavRecorder.end();
+      wavRecorder.end();
     }
   }
 
@@ -139,53 +155,61 @@ export function ConsolePage() {
         const buf = await event.data.arrayBuffer();
         const wavStreamPlayer = wavStreamPlayerRef.current;
 
-        if(!isFeedbackMode) {
+        if (!isFeedbackMode) {
           wavStreamPlayer.add16BitPCM(buf, "");
         }
       } else if (typeof event.data === "string") {
         const res = JSON.parse(event.data);
         switch (res.type) {
           case MessageType.ServerReady:
-            const wavStreamPlayer = wavStreamPlayerRef.current;
-            const wavRecorder = wavRecorderRef.current;
-
-            await wavStreamPlayer.connect();
-            await wavRecorder.begin();
-
             setIsServerReady(true);
-
-            if (socket) {
-              // timeoutId = setTimeout( () => {
-              await wavRecorder.record((data) => {
-                socket.send(data.mono)
-              });
-              // }, 2000);
-            }
-
             break;
           case MessageType.Interrupt:
-            wavStreamPlayerRef.current.interrupt();
+            // wavStreamPlayerRef.current.interrupt();
             break;
           case MessageType.FeedbackComplete:
             setServerFeedback(res.feedback);
             break;
           case MessageType.ItemsUpdated:
-            const batchedItems = res.items.reduce((acc: Array<{ content: string, role: string }>, item: any) => {
-              const curr = {
-                content: item.content[0].transcript,
-                role: item.role
-              };
-              const lastItem = acc[acc.length - 1];
-              if (lastItem && lastItem.role === curr.role) {
-                lastItem.content += (curr.content.charAt(0) == curr.content.charAt(0).toUpperCase() ?  ' ' : ' ') + curr.content;
-                return acc;
+            const batchedItems: Array<{ content: string, role: string }> = [];
+            let lastRole = res.items[0].role;
+            
+            res.items.forEach((item: any) => {
+              const content = item.content[0].transcript;
+              if (!content) return;
+
+              const role = item.role;
+
+              if (role == lastRole) {
+                batchedItems[batchedItems.length - 1].content += content;
+              } else {
+                batchedItems.push({ content, role });
+                lastRole = role;
               }
-              acc.push({ ...curr });
-              return acc;
-            }, [] as Array<{ content: string, role: string }>);
+            });
             console.log(batchedItems);
             setItems(batchedItems);
             break;
+
+            // const batchedItems = res.items.reduce((acc: Array<{ content: string, role: string }>, item: any) => {
+            //   const curr = {
+            //     content: item.content[0].transcript,
+            //     role: item.role
+            //   };
+            //   const lastItem = acc[acc.length - 1];
+            //   if (lastItem && lastItem.role === curr.role) {
+            //     lastItem.content += curr.content;
+            //     return acc;
+            //   }
+
+            //   else if (curr.content) {
+            //     acc.push({ ...curr });
+            //   }
+            //   return acc;
+            // }, [] as Array<{ content: string, role: string }>);
+            // console.log(batchedItems);
+            // setItems(batchedItems);
+            // break;
         }
       }
     }
@@ -285,13 +309,28 @@ export function ConsolePage() {
       socket.close();
     }
 
+    closeAudioHandlers();
+
     navigate('/dashboard');
   };
 
-
-
-  const handleClientReady = () => {
+  const handleClientReady = async () => {
     setIsClientReady(true);
+
+    const wavStreamPlayer = wavStreamPlayerRef.current;
+    const wavRecorder = wavRecorderRef.current;
+
+    await wavStreamPlayer.connect();
+    await wavRecorder.begin();
+
+
+    if (isVad) {
+      await wavRecorder.record((data) => {
+        if (socket) {
+          socket.send(data.mono);
+        }
+      });
+    }
 
     if (socket) {
       const payload = {
@@ -305,30 +344,50 @@ export function ConsolePage() {
 
   const handleEndInterview = async () => {
     setIsFeedbackMode(true);
-    closeAudioHandlers();
+    
+    const wavRecorder = wavRecorderRef.current;
+    const wavStreamPlayer = wavStreamPlayerRef.current;
+    await wavRecorder.pause();
+    await wavStreamPlayer.interrupt();
 
     const payload = {
       type: MessageType.RequestingFeedback,
       items: items
     }
+
     if (socket) {
       socket.send(JSON.stringify(payload));
     }
   }
 
+  const handleStartRecording = async () => {
+    const wavRecorder = wavRecorderRef.current;
+    await wavRecorder.record((data) => {
+      if (socket) {
+        socket.send(data.mono);
+        console.log("Sending data");
+      }
+    });
+  }
+
+  const handleStopRecording = async () => {
+    const wavRecorder = wavRecorderRef.current;
+    await wavRecorder.pause();
+  }
+
   /**
    * Render the application
    */
-  if (!isConnected) {
-    return <div className="min-h-screen flex flex-col items-center justify-center">Connecting to server...</div>;
-  }
+  // if (!isConnected) {
+  //   return <div className="min-h-screen flex flex-col items-center justify-center">Connecting to server...</div>;
+  // }
 
-  const header = ( 
+  const header = (
     <div className="">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div className="flex items-center">
           <button
-            onClick={handleBackToDashboard}
+            onClick={() => {handleBackToDashboard()}}
             className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
           >
             <ArrowLeft size={20} />
@@ -338,42 +397,42 @@ export function ConsolePage() {
       </div>
     </div>
   )
-  
-  if(isFeedbackMode) {
+
+  if (isFeedbackMode) {
     return (
       <div className="min-h-screen flex flex-col">
         {header}
 
         <div className="my-10 ">
           <h1 className="text-3xl font-semibold text-gray-900 text-center">
-              {getInterviewTitle(interviewType)}
+            {getInterviewTitle(interviewType)}
           </h1>
 
           <p className="text-center text-gray-500">Your recent interview.</p>
         </div>
 
         <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 justify-center">
-        {serverFeedback ? (
-          <div className="p-6 ring rounded-lg bg-blue-500 shadow-lg w-full max-w-2xl h-2/6 overflow-y-auto">
-            <h3 className="mb-4 font-bold text-white">Our Feedback:</h3>
-            <div className="text-sm text-gray-200">
-              <Markdown options={{ forceBlock: true }}>{serverFeedback}</Markdown>
+          {serverFeedback ? (
+            <div className="p-6 ring rounded-lg bg-blue-500 shadow-lg w-full max-w-2xl h-2/6 overflow-y-auto">
+              <h3 className="mb-2 font-bold text-white">Our Feedback:</h3>
+              <div className="text-sm text-gray-200 [&>ul>li]:list-disc [&>ul]:list-inside">
+                <Markdown options={{ forceBlock: true }}>{serverFeedback}</Markdown>
+              </div>
             </div>
-          </div>
-          
-        ) : (
+
+          ) : (
             <h1 className="text-gray-500 font-medium text-xl flex items-center gap-2">
               <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               <span>Generating feedback...</span>
             </h1>
-        )}
+          )}
 
-        <div className="w-full max-w-2xl mx-auto mt-8 bg-white overflow-hidden">
+          <div className="w-full max-w-2xl mx-auto mt-8 bg-white overflow-hidden">
 
-            {items.map((item, index) => item.content &&(
+            {items.map((item, index) => item.content && (
               <div key={index} className={"mb-3 p-4 rounded-lg " + (item.role === 'assistant' ? 'bg-white' : 'border-2 border-gray-100 rounded-lg')}>
                 <div className="font-medium text-gray-700 mb-1 inline-block">
                   {item.role === 'assistant' ? (
@@ -387,12 +446,12 @@ export function ConsolePage() {
                   )}
                 </div>
                 <div className={item.role === 'assistant' ? 'text-gray-500' : 'font-bold'}>
-                  {item.content ? item.content : '(truncated)'}
+                  {item.content && item.content != '\n' ? item.content : '(truncated)'}
                 </div>
               </div>
             ))}
 
-        </div>
+          </div>
         </div>
 
       </div>
@@ -429,16 +488,27 @@ export function ConsolePage() {
 
         {/* Center Column - Main Content */}
         <div className="flex-1 flex flex-col items-center justify-center mt-8">
-
-
-
-
           {/* Interview Controls and Visualization */}
-          <div className="flex flex-col items-center gap-8 min-w-xl max-w-full">
+          <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
+            <div className="w-full flex justify-end">
+              <div className="flex items-center gap-2 justify-end">
+                <span className="text-sm text-gray-600">Push to Talk</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    onChange={(e) => setIsVad(!e.target.checked)}
+                    checked={!isVad}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
             {!isClientReady && (
-              <div>
-                <div className="w-full max-w-md mb-12 space-y-4">
-                  <div className="flex flex-col gap-2">
+              <div className="w-full">
+                <div className="mb-12 space-y-4 w-full">
+                  <div className="flex flex-col gap-2 w-full">
                     <label htmlFor="voice-select" className="text-sm font-medium text-gray-700">
                       Select Voice
                     </label>
@@ -518,7 +588,7 @@ export function ConsolePage() {
             <canvas ref={serverCanvasRef} />
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-start space-x-4">
             {isClientReady && (!isServerReady ? (
               <button
                 disabled
@@ -542,6 +612,17 @@ export function ConsolePage() {
 
               </>
             ))}
+
+            {!isVad && (
+              <button
+                onMouseDown={handleStartRecording}
+                onMouseUp={handleStopRecording}
+                className="inline-flex items-center px-8 py-4 rounded-lg text-white font-medium text-lg gap-2 bg-blue-500 hover:bg-blue-400 transition-colors"
+              >
+                <Mic size={24} />
+                Push to talk
+              </button>
+            )}
           </div>
 
           {items.length > 0 && items.filter(item => item.role === 'assistant').slice(-1).map((item, index) => (
