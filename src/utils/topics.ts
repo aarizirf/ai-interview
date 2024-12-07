@@ -1,30 +1,32 @@
-export const getTopics = (type: string) => {
+import { InterviewType } from "./types";
+
+export const getTopics = (type: InterviewType) => {
   switch(type) {
-    case 'merger':
+    case InterviewType.Merger:
       return [
         'Accretion/Dilution Analysis',
-        'Deal Structures',
+        'Deal Structures', 
         'Synergy Valuation',
         'Purchase Price Allocation',
         'Transaction Impact'
       ];
-    case 'lbo':
+    case InterviewType.LBO:
       return [
         'Leverage Analysis',
         'Debt Structuring',
-        'Returns Modeling',
+        'Returns Modeling', 
         'Exit Strategies',
         'PE Investment Criteria'
       ];
-    case 'dcf':
+    case InterviewType.DCF:
       return [
         'Free Cash Flow Projections',
         'WACC Calculation',
         'Terminal Value Analysis',
-        'Growth Rate Assumptions',
+        'Growth Rate Assumptions', 
         'Sensitivity Analysis'
       ];
-    case 'valuation':
+    case InterviewType.Valuation:
       return [
         'Trading Comparables',
         'Precedent Transactions',
@@ -32,7 +34,7 @@ export const getTopics = (type: string) => {
         'Industry Multiples',
         'Private Company Valuation'
       ];
-    case 'enterprise':
+    case InterviewType.Enterprise:
       return [
         'Enterprise vs Equity Value',
         'Diluted Share Calculations',
@@ -40,7 +42,7 @@ export const getTopics = (type: string) => {
         'Minority Interest',
         'Convertible Securities'
       ];
-    case 'accounting':
+    case InterviewType.Accounting:
       return [
         'Financial Statements',
         'Working Capital Analysis',
@@ -48,10 +50,10 @@ export const getTopics = (type: string) => {
         'GAAP vs Non-GAAP',
         'Balance Sheet Impact'
       ];
-    default:
+    case InterviewType.General:
       return [
         'Accounting Fundamentals',
-        'Mergers & Acquisitions',
+        'Mergers & Acquisitions', 
         'LBO Modeling',
         'DCF Analysis',
         'Valuations',

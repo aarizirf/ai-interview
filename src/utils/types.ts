@@ -3,7 +3,9 @@ export enum MessageType {
   ClientReady = "client-ready",
   ServerReady = "server-ready",
   Interrupt = "interrupt",
-  ItemsUpdated = "items-updated"
+  ItemsUpdated = "items-updated",
+  RequestingFeedback = "requesting-feedback",
+  FeedbackComplete = "feedback-complete"
 }
 
 export enum InterviewType {

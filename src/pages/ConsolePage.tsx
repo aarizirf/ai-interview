@@ -8,8 +8,6 @@
  * This will also require you to set OPENAI_API_KEY= in a `.env` file
  * You can run it with `npm run relay`, in parallel with `npm start`
  */
-const LOCAL_RELAY_SERVER_URL: string =
-  process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,8 +22,10 @@ import { MessageType, InterviewType } from '../utils/types';
 import { getTopics } from '../utils/topics';
 import { getInstructions, getQuestions } from '../utils/instructions/helper';
 
+import Markdown from 'markdown-to-jsx'
+
 const getInterviewTitle = (type: InterviewType): string => {
-  switch(type) {
+  switch (type) {
     case InterviewType.Merger:
       return "M&A Technical Interview";
     case InterviewType.LBO:
@@ -80,23 +80,25 @@ export function ConsolePage() {
   const [isConnected, setIsConnected] = useState(false);
   const [isServerReady, setIsServerReady] = useState(false);
   const [isClientReady, setIsClientReady] = useState(false);
+  const [isFeedbackMode, setIsFeedbackMode] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string>('alloy');
   const [conversationTone, setConversationTone] = useState<string>('Professional');
   const [voiceSpeed, setVoiceSpeed] = useState<string>('Normal');
   const [items, setItems] = useState<any[]>([]);
+  const [serverFeedback, setServerFeedback] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     console.log("Do this once")
-    if(!isConnected) {
+    if (!isConnected) {
       handleConnectWebSocket();
     }
   }, []);
 
   /* Connect Web Socket Fn */
-  async function handleConnectWebSocket(){
+  async function handleConnectWebSocket() {
     let serverUrl = "wss://ws1.aarizirfan.com";
 
-    if(window.location.hostname === 'localhost') {
+    if (window.location.hostname === 'localhost') {
       console.log("Running locally");
       serverUrl = "ws://localhost:8080";
     }
@@ -111,16 +113,20 @@ export function ConsolePage() {
     newSocket.onclose = async () => {
       setIsConnected(false);
 
-      const wavStreamPlayer = wavStreamPlayerRef.current;
-      await wavStreamPlayer.interrupt();
-
-      const wavRecorder = wavRecorderRef.current;
-      if (wavRecorder) {
-        await wavRecorder.end();
-      }
+      closeAudioHandlers();
     };
 
     setSocket(newSocket);
+  }
+
+  const closeAudioHandlers = async () => {
+    const wavStreamPlayer = wavStreamPlayerRef.current;
+    await wavStreamPlayer.interrupt();
+
+    const wavRecorder = wavRecorderRef.current;
+    if (wavRecorder) {
+      await wavRecorder.end();
+    }
   }
 
   /* Handling Web Socket Media Event */
@@ -128,14 +134,17 @@ export function ConsolePage() {
     let timeoutId: NodeJS.Timeout;
 
     async function handleMessage(event: MessageEvent) {
-      if(typeof event.data !== "string") {
+      if (typeof event.data !== "string") {
         // Handling audio blob
         const buf = await event.data.arrayBuffer();
         const wavStreamPlayer = wavStreamPlayerRef.current;
-        wavStreamPlayer.add16BitPCM(buf, "");
-      } else if(typeof event.data === "string") {
+
+        if(!isFeedbackMode) {
+          wavStreamPlayer.add16BitPCM(buf, "");
+        }
+      } else if (typeof event.data === "string") {
         const res = JSON.parse(event.data);
-        switch(res.type) {
+        switch (res.type) {
           case MessageType.ServerReady:
             const wavStreamPlayer = wavStreamPlayerRef.current;
             const wavRecorder = wavRecorderRef.current;
@@ -147,9 +156,9 @@ export function ConsolePage() {
 
             if (socket) {
               // timeoutId = setTimeout( () => {
-                await wavRecorder.record((data) => {
-                  socket.send(data.mono)
-                });
+              await wavRecorder.record((data) => {
+                socket.send(data.mono)
+              });
               // }, 2000);
             }
 
@@ -157,22 +166,30 @@ export function ConsolePage() {
           case MessageType.Interrupt:
             wavStreamPlayerRef.current.interrupt();
             break;
+          case MessageType.FeedbackComplete:
+            setServerFeedback(res.feedback);
+            break;
           case MessageType.ItemsUpdated:
-            const newItems: any[] = [];
-            console.log("Items updated", res.items[res.items.length - 1]);
-            res.items.forEach((item: any) => {
-              newItems.push({
+            const batchedItems = res.items.reduce((acc: Array<{ content: string, role: string }>, item: any) => {
+              const curr = {
                 content: item.content[0].transcript,
                 role: item.role
-              });
-            });
-            setItems(newItems);
-
+              };
+              const lastItem = acc[acc.length - 1];
+              if (lastItem && lastItem.role === curr.role) {
+                lastItem.content += (curr.content.charAt(0) == curr.content.charAt(0).toUpperCase() ?  ' ' : ' ') + curr.content;
+                return acc;
+              }
+              acc.push({ ...curr });
+              return acc;
+            }, [] as Array<{ content: string, role: string }>);
+            console.log(batchedItems);
+            setItems(batchedItems);
             break;
         }
       }
     }
-    
+
     if (socket) {
       socket.onmessage = handleMessage;
     }
@@ -192,7 +209,7 @@ export function ConsolePage() {
   useEffect(() => {
     let isLoaded = true;
 
-    if(!isServerReady) {
+    if (!isServerReady) {
       return;
     }
 
@@ -214,27 +231,41 @@ export function ConsolePage() {
           clientCtx = clientCtx || clientCanvas.getContext('2d');
           if (clientCtx) {
             clientCtx.clearRect(0, 0, clientCanvas.width, clientCanvas.height);
-            const clientResult = wavRecorder.recording
+            const result = wavRecorder.recording
               ? wavRecorder.getFrequencies('voice')
               : { values: new Float32Array([0]) };
-
-            const serverResult = wavStreamPlayer.analyser
-              ? wavStreamPlayer.getFrequencies('voice')
-              : { values: new Float32Array([0]) };
-
-            let result: Float32Array = new Float32Array(serverResult.values.length);
-
-            serverResult.values.forEach((value, index) => {
-              result[index] = (value + clientResult.values[index]);
-            });
             WavRenderer.drawBars(
               clientCanvas,
               clientCtx,
-              result,
+              result.values,
+              '#0099ff',
+              80,
+              2,
+              3,
+              true
+            );
+          }
+        }
+        if (serverCanvas) {
+          if (!serverCanvas.width || !serverCanvas.height) {
+            serverCanvas.width = serverCanvas.offsetWidth;
+            serverCanvas.height = serverCanvas.offsetHeight;
+          }
+          serverCtx = serverCtx || serverCanvas.getContext('2d');
+          if (serverCtx) {
+            serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
+            const result = wavStreamPlayer.analyser
+              ? wavStreamPlayer.getFrequencies('voice')
+              : { values: new Float32Array([0]) };
+            WavRenderer.drawBars(
+              serverCanvas,
+              serverCtx,
+              result.values,
               '#009900',
-              50,
-              0,
-              8
+              80,
+              2,
+              3,
+              true
             );
           }
         }
@@ -257,7 +288,7 @@ export function ConsolePage() {
     navigate('/dashboard');
   };
 
-  
+
 
   const handleClientReady = () => {
     setIsClientReady(true);
@@ -268,185 +299,262 @@ export function ConsolePage() {
         instructions: getInstructions(getQuestions(interviewType), conversationTone, voiceSpeed),
         voice: selectedVoice,
       }
-      console.log(payload);
       socket.send(JSON.stringify(payload));
     }
   }
 
   const handleEndInterview = async () => {
+    setIsFeedbackMode(true);
+    closeAudioHandlers();
+
+    const payload = {
+      type: MessageType.RequestingFeedback,
+      items: items
+    }
     if (socket) {
-      socket.close();
-      // setIsConnected(false);
+      socket.send(JSON.stringify(payload));
     }
   }
 
   /**
    * Render the application
    */
-  if(!isConnected) {
+  if (!isConnected) {
     return <div className="min-h-screen flex flex-col items-center justify-center">Connecting to server...</div>;
+  }
+
+  const header = ( 
+    <div className="">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div className="flex items-center">
+          <button
+            onClick={handleBackToDashboard}
+            className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
+          >
+            <ArrowLeft size={20} />
+            <span>Back</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+  
+  if(isFeedbackMode) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        {header}
+
+        <div className="my-10 ">
+          <h1 className="text-3xl font-semibold text-gray-900 text-center">
+              {getInterviewTitle(interviewType)}
+          </h1>
+
+          <p className="text-center text-gray-500">Your recent interview.</p>
+        </div>
+
+        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 justify-center">
+        {serverFeedback ? (
+          <div className="p-4 rounded-lg bg-gray-50 w-full max-w-2xl h-2/6 overflow-y-auto">
+            <h3 className="mb-4 font-bold text-gray-700">Our Feedback:</h3>
+            <div className="text-sm text-gray-50 prose prose-li:text-gray-700">
+              <Markdown options={{ forceBlock: true }}>{serverFeedback}</Markdown>
+            </div>
+          </div>
+          
+        ) : (
+            <h1 className="text-gray-500 font-medium text-xl flex items-center gap-2">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Generating feedback...</span>
+            </h1>
+        )}
+
+        <div className="w-full max-w-2xl mx-auto mt-8 bg-white overflow-hidden">
+
+            {items.map((item, index) => item.content &&(
+              <div key={index} className={"mb-6 p-4 rounded-lg " + (item.role === 'assistant' ? 'bg-white' : 'border-2 border-gray-100 rounded-lg')}>
+                <div className="font-medium text-gray-700 mb-1 inline-block">
+                  {item.role === 'assistant' ? (
+                    <p className="text-sm uppercase font-bold text-gray-400">
+                      Interviewer
+                    </p>
+                  ) : (
+                    <div className="text-sm uppercase font-bold text-gray-400">
+                      You
+                    </div>
+                  )}
+                </div>
+                <div className="">
+                  {item.content ? item.content : '(truncated)'}
+                </div>
+              </div>
+            ))}
+
+        </div>
+        </div>
+
+      </div>
+    )
   }
 
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <button
-              onClick={handleBackToDashboard}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
-            >
-              <ArrowLeft size={20} />
-              <span>Back</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      {header}
 
       {/* Main Content */}
-      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Left Column - Topics */}
-          <div className="w-80 flex-shrink-0">
-            <div className="sticky top-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText size={24} className="text-blue-600" />
-                Main Topics and Ideas
-              </h2>
-              <div className="space-y-3">
-                {getTopics(interviewType).map((topic, index) => (
-                  <div 
-                    key={index}
-                    className="bg-white p-4 rounded-lg border border-gray-100"
-                  >
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <div className="h-2 w-2 rounded-full bg-blue-500" />
-                      {topic}
-                    </div>
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 justify-center">
+
+        {/* Topics as badges */}
+        {/* Title Section */}
+        <div className="mb-0">
+          <h1 className="text-4xl font-semibold text-gray-900 mb-4 text-center">
+            {getInterviewTitle(interviewType)}
+          </h1>
+        </div>
+
+        <div className="flex flex-row gap-2 flex-wrap py-2 max-w-xl mx-auto justify-center rounded-lg">
+          {getTopics(interviewType).map((topic, index) => (
+            <div
+              key={index}
+              className="flex-shrink-0 bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full whitespace-nowrap"
+            >
+              {topic}
+            </div>
+          ))}
+        </div>
+
+
+        {/* Center Column - Main Content */}
+        <div className="flex-1 flex flex-col items-center justify-center mt-8">
+
+
+
+
+          {/* Interview Controls and Visualization */}
+          <div className="flex flex-col items-center gap-8 min-w-xl max-w-full">
+            {!isClientReady && (
+              <div>
+                <div className="w-full max-w-md mb-12 space-y-4">
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="voice-select" className="text-sm font-medium text-gray-700">
+                      Select Voice
+                    </label>
+                    <select
+                      id="voice-select"
+                      className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                      onChange={(e) => {
+                        setSelectedVoice(e.target.value);
+                      }}
+                      value={selectedVoice}
+                    >
+                      {['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'].map((voice) => (
+                        <option key={voice} value={voice}>
+                          {voice.charAt(0).toUpperCase() + voice.slice(1)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          {/* Center Column - Main Content */}
-          <div className="flex-1 flex flex-col items-center justify-center">
-            {/* Title Section */}
-            <div className="mb-12">
-              <h1 className="text-4xl font-semibold text-gray-900 mb-4">
-                {getInterviewTitle(interviewType)}
-              </h1>
-            </div>
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="tone-select" className="text-sm font-medium text-gray-700">
+                      Conversation Tone
+                    </label>
+                    <select
+                      id="tone-select"
+                      className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                      onChange={(e) => {
+                        setConversationTone(e.target.value);
+                      }}
+                      value={conversationTone}
+                    >
+                      {['Professional', 'Warm', 'Helpful'].map((tone) => (
+                        <option key={tone} value={tone}>
+                          {tone}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-            
-
-            {/* Interview Controls and Visualization */}
-            <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
-              {!isClientReady ? (
-                <div>
-            <div className="w-full max-w-md mb-12 space-y-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="voice-select" className="text-sm font-medium text-gray-700">
-                  Select Voice
-                </label>
-                <select
-                  id="voice-select"
-                  className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
-                  onChange={(e) => {
-                    setSelectedVoice(e.target.value);
-                  }}
-                  value={selectedVoice}
-                >
-                  {['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'].map((voice) => (
-                    <option key={voice} value={voice}>
-                      {voice.charAt(0).toUpperCase() + voice.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="tone-select" className="text-sm font-medium text-gray-700">
-                  Conversation Tone
-                </label>
-                <select
-                  id="tone-select"
-                  className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
-                  onChange={(e) => {
-                    setConversationTone(e.target.value);
-                  }}
-                  value={conversationTone}
-                >
-                  {['Professional', 'Warm', 'Helpful'].map((tone) => (
-                    <option key={tone} value={tone}>
-                      {tone}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="speed-select" className="text-sm font-medium text-gray-700">
-                  Voice Speed
-                </label>
-                <select
-                  id="tone-select"
-                  className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
-                  onChange={(e) => {
-                    setVoiceSpeed(e.target.value);
-                  }}
-                  value={voiceSpeed}
-                >
-                  {['Slow', 'Normal', 'Fast'].map((speed) => (
-                    <option key={speed} value={speed}>
-                      {speed}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              </div>  
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="speed-select" className="text-sm font-medium text-gray-700">
+                      Voice Speed
+                    </label>
+                    <select
+                      id="tone-select"
+                      className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                      onChange={(e) => {
+                        setVoiceSpeed(e.target.value);
+                      }}
+                      value={voiceSpeed}
+                    >
+                      {['Slow', 'Normal', 'Fast'].map((speed) => (
+                        <option key={speed} value={speed}>
+                          {speed}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <button
-                  onClick={() => {handleClientReady()}}
+                  onClick={() => { handleClientReady() }}
                   className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
                 >
                   <Play size={24} />
                   Start Interview
                 </button>
-                </div>
-              ) : !isServerReady ? (
-                <button
-                  disabled
-                  className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-400 text-white font-medium text-lg cursor-not-allowed gap-2"
-                >
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Loading...
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => {handleEndInterview()}}
-                    className="inline-flex items-center px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-900 transition-colors gap-2"
-                  >
-                    <X size={24} />
-                    End Interview
-                  </button>
-                  {/* Visualization */}
-                  <div className="visualization-entry">
-                    <canvas ref={clientCanvasRef} />
-                    {/* <canvas ref={serverCanvasRef} /> */}
-                  </div>
-                </>
-              )}
-              
-            </div>
+              </div>
+            )}
+
           </div>
+        </div>
+
+        {/* Visualization */}
+        <div className="min-w-md max-w-2xl">
+          <div className="visualization-entry min-w-2xl justify-center flex my-20">
+            <canvas ref={clientCanvasRef} />
+            <canvas ref={serverCanvasRef} />
+          </div>
+
+          <div className="flex justify-center">
+            {isClientReady && (!isServerReady ? (
+              <button
+                disabled
+                className="inline-flex items-center px-8 py-4 rounded-lg text-gray-400 font-medium text-lg cursor-not-allowed gap-2"
+              >
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading...
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => { handleEndInterview() }}
+                  className="inline-flex items-center px-8 py-4 rounded-lg border border-gray-50 border-2 text-red-800 font-medium text-lg hover:bg-gray-50 transition-colors gap-2"
+                >
+                  <X size={24} />
+                  End Interview
+                </button>
+
+              </>
+            ))}
+          </div>
+
+          {items.length > 0 && items.filter(item => item.role === 'assistant').slice(-1).map((item, index) => (
+            <div key={index} className="mt-4 p-4 rounded-lg">
+              <div className="text-sm text-gray-500 mb-1">Interviewer</div>
+              <div className="text-gray-700">{item.content}</div>
+            </div>
+          ))}
+
+
         </div>
       </div>
     </div>
+
   );
 }
