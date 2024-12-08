@@ -64,5 +64,6 @@ export const getInstructions = (questions: string, tone: string, voiceSpeed: str
         Simulate a live interview with me, as if you worked at an investment banking firm.
         Be friendly and wait for my response before asking the next question.
         Do not give me feedback on my answers.
+        Randomize the order of the questions.
     `;
 }
