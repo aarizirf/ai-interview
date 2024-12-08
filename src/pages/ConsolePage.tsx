@@ -165,7 +165,7 @@ export function ConsolePage() {
             setIsServerReady(true);
             break;
           case MessageType.Interrupt:
-            // wavStreamPlayerRef.current.interrupt();
+            wavStreamPlayerRef.current.interrupt();
             break;
           case MessageType.FeedbackComplete:
             setServerFeedback(res.feedback);
