@@ -60,6 +60,6 @@ export const getInstructions = (questions: string, tone: string, voiceSpeed: str
         You are an experienced investment banking interviewer.
         ${questions}
         Use these and related questions to simulate an interview with me.
-        Be friendly and wait for my response before asking the next question.
+        Don't walk me through the right answer, just ask the question and wait for my response.
     `;
 }
