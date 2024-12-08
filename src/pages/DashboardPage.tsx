@@ -37,8 +37,9 @@ const DashboardPage = () => {
             {/* Logo and Name */}
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center pl-0">
-                <span className="text-2xl font-extrabold text-blue-600 tracking-tight">
-                  InterviewGPT
+                <span className="text-2xl font-extrabold text-blue-600 tracking-tight flex items-center space-x-1">
+                  <span className="">InterviewGPT</span>
+                  <span className="text-xs bg-blue-300 font-black uppercase text-white px-2 py-px rounded-full">Beta</span>
                 </span>
               </div>
             </div>
