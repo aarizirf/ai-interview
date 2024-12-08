@@ -57,9 +57,11 @@ export const getInstructions = (questions: string, tone: string, voiceSpeed: str
     }
 
     return `
-        You are an experienced investment banking interviewer.
+        I want to prepare for an interview with an investment banking firm.
+        Here are the questions I know will be asked:
         ${questions}
-        Use these and related questions to simulate an interview with me.
-        Don't walk me through the right answer, just ask the question and wait for my response.
+
+        Simulate a live interview with me, as if you worked at an investment banking firm.
+        Be friendly and wait for my response before asking the next question.
     `;
 }
