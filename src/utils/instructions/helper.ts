@@ -58,10 +58,11 @@ export const getInstructions = (questions: string, tone: string, voiceSpeed: str
 
     return `
         I want to prepare for an interview with an investment banking firm.
-        Here are the questions I know will be asked:
+        Here are the questions I know I will be asked:
         ${questions}
 
         Simulate a live interview with me, as if you worked at an investment banking firm.
         Be friendly and wait for my response before asking the next question.
+        Do not give me feedback on my answers.
     `;
 }
