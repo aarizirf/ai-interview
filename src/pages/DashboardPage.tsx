@@ -38,7 +38,7 @@ const DashboardPage = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center pl-0">
                 <span className="text-2xl font-extrabold text-blue-600 tracking-tight">
-                  AlphaEd
+                  InterviewGPT
                 </span>
               </div>
             </div>

@@ -101,7 +101,7 @@ export function ConsolePage() {
 
     if (window.location.hostname === 'localhost') {
       console.log("Running locally");
-      serverUrl = "ws://localhost:8080";
+       // serverUrl = "ws://localhost:8080";
     }
 
     const newSocket = new WebSocket(serverUrl);

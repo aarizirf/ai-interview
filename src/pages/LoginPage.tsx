@@ -33,7 +33,7 @@ const LoginPage = () => {
               Nail your <span className="underline decoration-blue-600">interview</span>.
             </h1>
             <p className="mt-3 text-xl text-gray-500">
-              AlphaEd
+              InterviewGPT
             </p>
           </div>
         </div>
