@@ -16,11 +16,9 @@ export const FeedbackPage = (
         <h1 className="text-4xl font-light text-white">
           {interviewTitle}
         </h1>
-
-        <p className="text-gray-400">Your recent transcript.</p>
       </div>
 
-      <div className="w-full py-10">
+      <div className="w-full pb-10">
         <div className="w-full max-w-2xl mx-auto">
           {/* <h3 className="mb-2 text-lg font-light text-center text-gray-400">A summary of your interview</h3> */}
           <div className="">
@@ -48,13 +46,13 @@ export const FeedbackPage = (
 
         <div className="w-full max-w-2xl mx-auto mt-8 grid grid-cols-1">
 
-          <h3 className="mb-2 text-lg font-light text-gray-300 text-center">Your interview transcript</h3>
+          <h3 className="mb-2 text-xl font-light text-gray-500 text-center">Your interview transcript</h3>
           <div className="pt-10 pb-20">
           {items.map((item, index) => item.content && (
             (item.role === 'assistant') ? (
 
               <div key={index} className="py-4 px-2 text-left">
-                <p className="text-gray-200 font-mono text-sm">
+                <p className="text-gray-400 font-mono text-sm">
                   <strong>Interviewer: </strong>
                   <span>{item.content ? item.content : '(truncated)'}</span>
                 </p>

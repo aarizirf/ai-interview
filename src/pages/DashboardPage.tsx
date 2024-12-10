@@ -29,7 +29,7 @@ const DashboardPage = () => {
   const color = "#399844";
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-800">
       {/* Navigation Bar */}
       <nav>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,9 +37,9 @@ const DashboardPage = () => {
             {/* Logo and Name */}
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center pl-0">
-                <span className="text-2xl font-extrabold text-blue-600 tracking-tight flex items-center space-x-1">
+                <span className="text-lg font-light text-blue-500 tracking-tight flex items-center space-x-2">
                   <span className="">InterviewGPT</span>
-                  <span className="text-xs bg-blue-300 font-black uppercase text-white px-2 py-px rounded-full">Beta</span>
+                  <span className="text-xs bg-blue-500 font-black uppercase text-white px-2 py-px rounded-full">Beta</span>
                 </span>
               </div>
             </div>
@@ -60,10 +60,10 @@ const DashboardPage = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="mb-16">
-          <h2 className="text-4xl font-semibold text-gray-900">
+          <h2 className="text-3xl font-light text-white">
             Hi {userName || 'there'} 👋
           </h2>
-          <p className="mt-4 text-gray-500 text-lg max-w-3xl">
+          <p className="mt-4 text-gray-500 max-w-xl text-sm">
             We've sourced thousands of historical interviews and prep materials to create personalized mock interviews tailored to your needs.
           </p>
         </div>
@@ -73,15 +73,16 @@ const DashboardPage = () => {
           <div className="md:col-span-2">
             <button
               onClick={() => navigateToInterview(navigate, { type: InterviewType.General })}
-              className="w-full text-left p-8 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+              
+              className="w-full border border-gray-700 hover:border-gray-800 text-left p-6 bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors duration-200"
             >
               <div className="flex items-start gap-8">
                 <div className="flex-shrink-0">
-                  <MessageCircle className="w-12 h-12 text-blue-600" />
+                  <MessageCircle className="w-12 h-12 text-blue-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">General Q&A</h2>
-                  <p className="text-gray-600 text-lg">
+                  <h2 className="text-xl font-bold text-blue-500 mb-2">General Q&A</h2>
+                  <p className="text-gray-500 text-lg">
                     Practice common investment banking interview questions with real-time feedback and guidance.
                   </p>
                 </div>
@@ -92,69 +93,69 @@ const DashboardPage = () => {
           {/* Regular Cards */}
           <button
             onClick={() => navigateToInterview(navigate, { type: InterviewType.LBO })}
-            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+            className="border hover:border-gray-800 border-px border-gray-700 text-left p-6 bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-3">
-              <DollarSign className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-900">LBO Interview</h2>
+              <DollarSign className="w-5 h-5 text-blue-500" />
+              <h2 className="text-lg font-bold text-blue-500">LBO Interview</h2>
             </div>
-            <p className="text-gray-600">Practice leveraged buyout concepts and modeling</p>
+            <p className="text-gray-500">Practice leveraged buyout concepts and modeling</p>
           </button>
           
           <button
             onClick={() => navigateToInterview(navigate, { type: InterviewType.DCF })}
-            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+            className="border hover:border-gray-800 border-px border-gray-700 text-left p-6 bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
-              <PieChart className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-semibold text-gray-900">DCF Interview</h2>
+              <PieChart className="w-5 h-5 text-indigo-400" />
+              <h2 className="text-lg font-bold text-blue-500">DCF Interview</h2>
             </div>
-            <p className="text-gray-600">Practice discounted cash flow analysis and valuation</p>
+            <p className="text-gray-500">Practice discounted cash flow analysis and valuation</p>
           </button>
           
           <button
             onClick={() => navigateToInterview(navigate, { type: InterviewType.Valuation })}
-            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+            className="border hover:border-gray-800 border-px border-gray-700 text-left p-6 bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
-              <BarChart className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Valuation Interview</h2>
+              <BarChart className="w-5 h-5 text-indigo-400" />
+              <h2 className="text-lg font-bold text-blue-500">Valuation Interview</h2>
             </div>
-            <p className="text-gray-600">Practice company valuation methodologies and analysis</p>
+            <p className="text-gray-500">Practice company valuation methodologies and analysis</p>
           </button>
           
           <button
             onClick={() => navigateToInterview(navigate, { type: InterviewType.Enterprise })}
-            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+            className="border hover:border-gray-800 border-px border-gray-700 text-left p-6 bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
-              <Activity className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Enterprise Value</h2>
+              <Activity className="w-5 h-5 text-indigo-400" />
+              <h2 className="text-lg font-bold text-blue-500">Enterprise Value</h2>
             </div>
-            <p className="text-gray-600">Practice enterprise and equity value concepts</p>
+            <p className="text-gray-500">Practice enterprise and equity value concepts</p>
           </button>
           
           <button
             onClick={() => navigateToInterview(navigate, { type: InterviewType.Accounting })}
-            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+            className="border hover:border-gray-800 border-px border-gray-700 text-left p-6 bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-2">
-              <FileText className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Accounting Interview</h2>
+              <FileText className="w-5 h-5 text-indigo-400" />
+              <h2 className="text-lg font-bold text-blue-500">Accounting Interview</h2>
             </div>
-            <p className="text-gray-600">Practice financial statements and accounting concepts</p>
+            <p className="text-gray-500">Practice financial statements and accounting concepts</p>
           </button>
 
           {/* Merger Model Card - Moved to last position */}
           <button
             onClick={() => navigateToInterview(navigate, { type: InterviewType.Merger })}
-            className="text-left p-6 border border-gray-100 rounded-lg hover:border-blue-600 transition-colors duration-200"
+            className="border hover:border-gray-800 border-px border-gray-700 text-left p-6 bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors duration-200"
           >
             <div className="flex items-center gap-3 mb-3">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Merger Model</h2>
+              <TrendingUp className="w-5 h-5 text-blue-500" />
+              <h2 className="text-lg font-bold text-blue-500">Merger Model</h2>
             </div>
-            <p className="text-gray-600">Practice M&A concepts and merger modeling</p>
+            <p className="text-gray-500">Practice M&A concepts and merger modeling</p>
           </button>
         </div>
       </div>

@@ -32,7 +32,7 @@ const LoginPage = () => {
             <h1 className="text-6xl font-bold text-gray-900 tracking-tight">
               Nail your <span className="underline decoration-blue-600">interview</span>.
             </h1>
-            <p className="mt-3 text-xl text-gray-500">
+            <p className="mt-3 text-xl font-light text-gray-500">
               InterviewGPT
             </p>
           </div>
@@ -43,13 +43,13 @@ const LoginPage = () => {
           <div className="text-center opacity-0 animate-fadeIn">
             <button
               onClick={handleGoogleSignIn}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-all duration-200 mr-4"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-all duration-200 mr-4"
             >
               Start now, for free
             </button>
             <button
               onClick={handleGoogleSignIn}
-              className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200"
+              className="inline-flex items-center px-6 py-3 border border-gray-300 text-base rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200"
             >
               Sign in
             </button>
@@ -59,7 +59,7 @@ const LoginPage = () => {
         <div className="pb-16">
           {/* Subheading */}
           <div className="text-center mt-48 mb-24">
-            <h2 className="text-4xl font-semibold text-gray-900">
+            <h2 className="text-4xl font-light text-gray-900">
               Your personal mock interviewer
             </h2>
           </div>
@@ -71,8 +71,8 @@ const LoginPage = () => {
                   <BarChart className="w-12 h-12 text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-2">Investment Banking</h3>
-                  <p className="text-gray-600 text-lg">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Investment Banking</h3>
+                  <p className="text-gray-500 text-lg">
                     Master technicals, LBO modeling, and valuation concepts with real-time feedback.
                   </p>
                 </div>
@@ -83,8 +83,8 @@ const LoginPage = () => {
                   <Users className="w-12 h-12 text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-2">Consulting</h3>
-                  <p className="text-gray-600 text-lg">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Consulting</h3>
+                  <p className="text-gray-500 text-lg">
                     Practice case interviews, frameworks, and market sizing with expert guidance.
                   </p>
                 </div>
@@ -95,8 +95,8 @@ const LoginPage = () => {
           {/* Value Props */}
           <div className="mt-48">
             <div className="text-center mb-24">
-              <h2 className="text-4xl font-semibold text-gray-900">
-                Excess returns per unit of studying
+              <h2 className="text-4xl font-light text-gray-900">
+                <span className="text-blue-60">Excess returns</span> per unit of studying
               </h2>
             </div>
 
@@ -141,7 +141,7 @@ const LoginPage = () => {
 
           {/* Pricing */}
           <div className="mt-48">
-            <h2 className="text-4xl font-semibold text-gray-900 mb-12 text-center">
+            <h2 className="text-4xl font-light text-gray-900 mb-12 text-center">
               Simple, transparent pricing
             </h2>
             
@@ -172,7 +172,7 @@ const LoginPage = () => {
                     </li>
                   </ul>
                 </div>
-                <button className="w-full mt-8 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button onClick={handleGoogleSignIn} className="w-full mt-8 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" >
                   Get started
                 </button>
               </div>

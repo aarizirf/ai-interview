@@ -178,8 +178,8 @@ export function ConsolePage() {
             let lastRole = res.items[0].role;
 
             res.items.forEach((item: any) => {
-              const content = item.content[0].transcript;
-              if (!content) return;
+              if (!item.content[0].transcript) return;
+              let content = item.content[0].transcript;
 
               const role = item.role;
 
@@ -373,7 +373,7 @@ export function ConsolePage() {
         <div className="flex items-center">
           <button
             onClick={() => { handleBackToDashboard() }}
-            className="text-gray-200 hover:text-gray-100 flex items-center gap-2"
+            className="text-gray-400 hover:text-gray-200 flex items-center gap-2 p-3"
           >
             <ArrowLeft size={20} />
             <span>Back</span>
@@ -415,22 +415,28 @@ export function ConsolePage() {
     <div className="min-h-screen flex flex-col bg-gray-900">
       {header}
 
-      <div className="mb-0">
-        <h1 className="text-3xl font-light text-white -mt-6 mb-4 text-center">
-          {getInterviewTitle(interviewType)}
-        </h1>
-      </div>
-
-      <div className="flex flex-row gap-2 flex-wrap max-w-sm mx-auto justify-center rounded-lg">
-        {getTopics(interviewType).map((topic, index) => (
-          <div
-            key={index}
-            className="flex-shrink-0 bg-gray-700 text-blue-400 text-xs font-medium px-2 py-px rounded-full whitespace-nowrap"
-          >
-            {topic}
+      {!isClientReady && (
+        <div className="">
+          <div className="mb-0">
+            <h1 className="text-3xl font-light text-white -mt-6 mb-4 text-center">
+              {getInterviewTitle(interviewType)}
+            </h1>
           </div>
-        ))}
-      </div>
+
+          <div className="flex flex-row gap-2 flex-wrap max-w-sm mx-auto justify-center rounded-lg">
+            {getTopics(interviewType).map((topic, index) => (
+              <div
+                key={index}
+                className="flex-shrink-0 bg-gray-700 text-blue-400 text-xs font-medium px-2 py-px rounded-full whitespace-nowrap"
+              >
+                {topic}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+
 
       {/* Main Content */}
       <div className="">
@@ -441,7 +447,7 @@ export function ConsolePage() {
             <div className="w-full flex justify-end">
               {isClientReady && isServerReady && (
                 <div className="flex items-center gap-2 justify-end">
-                  <span className="text-sm text-gray-300">Push to Talk</span>
+                  <span className="text-sm text-gray-600">Push to Talk</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -449,7 +455,7 @@ export function ConsolePage() {
                       onChange={(e) => setIsVad(!e.target.checked)}
                       checked={!isVad}
                     />
-                    <div className="w-11 h-6 bg-gray-800 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-gray-700 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-600 after:border-gray-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
               )}
@@ -478,13 +484,13 @@ export function ConsolePage() {
         {!isClientReady && (
           <div className="">
             <div className="mb-4 absolute bottom-0 w-full flex justify-center">
-            <button
+              <button
                 onClick={() => setShowSettings(true)}
                 className="inline-flex items-center px-4 py-2 rounded-lg bg-gray-700 text-gray-100 hover:bg-gray-600 transition-colors gap-2"
               >
                 <Settings size={20} />
-              Interview Settings
-            </button>
+                Interview Settings
+              </button>
             </div>
 
             {showSettings && (
@@ -582,14 +588,7 @@ export function ConsolePage() {
                 <canvas ref={serverCanvasRef} />
               </div>
 
-              {items.length > 0 && items.filter(item => item.role === 'assistant').slice(-1).map((item, index) => (
-                <div className="max-w-md mx-auto">
-                  <div key={index} className="p-4 rounded-lg mx-auto border border-gray-700 font-mono text-sm">
-                    <div className="text-sm font-light text-gray-500 mb-1">Interviewer</div>
-                    <div className="text-white text-gray-300">{item.content}</div>
-                  </div>
-                </div>
-              ))}
+
             </div>
           )}
 
@@ -601,30 +600,42 @@ export function ConsolePage() {
 
         </div>
       </div>
-      <div className="bottom-0 absolute mb-4 flex justify-center w-full">
-        <div className="flex space-x-4">
-          {isClientReady && isServerReady && (
-            <button
-              onClick={() => { handleEndInterview() }}
-              className="inline-flex items-center px-8 py-2 rounded-full bg-red-600 text-gray-100 font-medium text-lg hover:bg-red-500 transition-colors gap-2"
-            >
-              <X size={24} />
-              <div className="">
-                End Interview
-              </div>
-            </button>
-          )}
+      <div className="bottom-0 absolute mb-4 w-full flex justify-center">
+        <div className="">
 
-          {!isVad && isClientReady && isServerReady && (
-            <button
-              onMouseDown={handleStartRecording}
-              onMouseUp={handleStopRecording}
-              className="inline-flex items-center px-8 py-2 rounded-full text-white font-medium text-lg gap-2 bg-blue-500 hover:bg-blue-400 transition-colors"
-            >
-              <Mic size={24} />
-              Push to talk
-            </button>
-          )}
+          {items.length > 0 && items.filter(item => item.role === 'assistant').slice(-1).map((item, index) => (
+            <div className="max-w-md mx-auto mb-3">
+              <div key={index} className="p-4 rounded-lg mx-auto border border-gray-700 font-mono text-sm">
+                <div className="text-sm font-light text-gray-500 mb-1">Interviewer</div>
+                <div className="text-white text-gray-300">{item.content}</div>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex space-x-4 w-full justify-center">
+            {isClientReady && isServerReady && (
+              <button
+                onClick={() => { handleEndInterview() }}
+                className="inline-flex items-center px-8 py-2 rounded-full bg-red-600 text-gray-100 font-medium text-lg hover:bg-red-500 transition-colors gap-2"
+              >
+                <X size={24} />
+                <div className="">
+                  End Interview
+                </div>
+              </button>
+            )}
+
+            {!isVad && isClientReady && isServerReady && (
+              <button
+                onMouseDown={handleStartRecording}
+                onMouseUp={handleStopRecording}
+                className="inline-flex items-center px-8 py-2 rounded-full text-white font-medium text-lg gap-2 bg-blue-500 hover:bg-blue-400 transition-colors"
+              >
+                <Mic size={24} />
+                Push to talk
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
