@@ -15,14 +15,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Play, ArrowLeft, FileText, Mic } from 'react-feather';
+import { X, Play, ArrowLeft, FileText, Mic, Settings } from 'react-feather';
 
 import './ConsolePage.scss';
 import { MessageType, InterviewType } from '../utils/types';
 import { getTopics } from '../utils/topics';
 import { getInstructions, getQuestions } from '../utils/instructions/helper';
 
-import Markdown from 'markdown-to-jsx'
+import { FeedbackPage } from './FeedbackPage';
+import { get } from 'http';
 
 const getInterviewTitle = (type: InterviewType): string => {
   switch (type) {
@@ -87,6 +88,7 @@ export function ConsolePage() {
   const [items, setItems] = useState<any[]>([]);
   const [serverFeedback, setServerFeedback] = useState<string | undefined>(undefined);
   const [isVad, setIsVad] = useState<boolean>(true);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
   useEffect(() => {
     console.log("Do this once")
@@ -101,7 +103,7 @@ export function ConsolePage() {
 
     if (window.location.hostname === 'localhost') {
       console.log("Running locally");
-       // serverUrl = "ws://localhost:8080";
+      // serverUrl = "ws://localhost:8080";
     }
 
     const newSocket = new WebSocket(serverUrl);
@@ -109,6 +111,7 @@ export function ConsolePage() {
     newSocket.onopen = async () => {
       console.log("Connected to server");
       setIsConnected(true);
+      // handleClientReady();
     };
 
     newSocket.onclose = async () => {
@@ -173,7 +176,7 @@ export function ConsolePage() {
           case MessageType.ItemsUpdated:
             const batchedItems: Array<{ content: string, role: string }> = [];
             let lastRole = res.items[0].role;
-            
+
             res.items.forEach((item: any) => {
               const content = item.content[0].transcript;
               if (!content) return;
@@ -324,10 +327,10 @@ export function ConsolePage() {
 
   const handleEndInterview = async () => {
     setIsFeedbackMode(true);
-    
+
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
-    if(isVad) {
+    if (isVad) {
       await wavRecorder.pause();
     }
     wavStreamPlayer.interrupt();
@@ -369,8 +372,8 @@ export function ConsolePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div className="flex items-center">
           <button
-            onClick={() => {handleBackToDashboard()}}
-            className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
+            onClick={() => { handleBackToDashboard() }}
+            className="text-gray-200 hover:text-gray-100 flex items-center gap-2"
           >
             <ArrowLeft size={20} />
             <span>Back</span>
@@ -380,236 +383,252 @@ export function ConsolePage() {
     </div>
   )
 
+  // Add this new useEffect to handle clicks outside the settings panel
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const settingsPanel = document.querySelector('.settings-panel');
+      if (settingsPanel && !settingsPanel.contains(event.target as Node)) {
+        setShowSettings(false);
+      }
+    };
+
+    if (showSettings) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettings]);
+
   if (isFeedbackMode) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        {header}
-
-        <div className="my-10 ">
-          <h1 className="text-3xl font-semibold text-gray-900 text-center">
-            {getInterviewTitle(interviewType)}
-          </h1>
-
-          <p className="text-center text-gray-500">Your recent interview.</p>
-        </div>
-
-        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 justify-center">
-          {serverFeedback ? (
-            <div className="p-6 ring rounded-lg bg-blue-500 shadow-lg w-full max-w-2xl h-2/6 overflow-y-auto">
-              <h3 className="mb-2 font-bold text-white">Our Feedback:</h3>
-              <div className="text-sm text-gray-200 [&>ul>li]:list-disc [&>ul]:list-inside">
-                <Markdown options={{ forceBlock: true }}>{serverFeedback}</Markdown>
-              </div>
-            </div>
-
-          ) : (
-            <h1 className="text-gray-500 font-medium text-xl flex items-center gap-2">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Generating feedback...</span>
-            </h1>
-          )}
-
-          <div className="w-full max-w-2xl mx-auto mt-8 grid grid-cols-1 divide-y divide-gray-100">
-
-            {items.map((item, index) => item.content && (
-              <button key={index} className="py-4 px-2 hover:bg-gray-100 text-left" onClick={() => {
-                navigator.clipboard.writeText(item.content)
-              }}>
-                <p className="text-gray-700 font-mono text-sm">
-                  <strong>{item.role === 'assistant' ? 'Interviewer' : 'You'}: </strong>
-                  <span>{item.content ? item.content : '(truncated)'}</span>
-                </p>
-                
-              </button>
-            ))}
-
-          </div>
-        </div>
-
-      </div>
-    )
+    return <FeedbackPage
+      header={header}
+      interviewTitle={getInterviewTitle(interviewType)}
+      serverFeedback={serverFeedback}
+      items={items}
+    />
   }
 
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-900">
       {header}
 
+      <div className="mb-0">
+        <h1 className="text-3xl font-light text-white -mt-6 mb-4 text-center">
+          {getInterviewTitle(interviewType)}
+        </h1>
+      </div>
+
+      <div className="flex flex-row gap-2 flex-wrap max-w-sm mx-auto justify-center rounded-lg">
+        {getTopics(interviewType).map((topic, index) => (
+          <div
+            key={index}
+            className="flex-shrink-0 bg-gray-700 text-blue-400 text-xs font-medium px-2 py-px rounded-full whitespace-nowrap"
+          >
+            {topic}
+          </div>
+        ))}
+      </div>
+
       {/* Main Content */}
-      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 justify-center">
-
-        {/* Topics as badges */}
-        {/* Title Section */}
-        <div className="mb-0">
-          <h1 className="text-4xl font-semibold text-gray-900 mb-4 text-center">
-            {getInterviewTitle(interviewType)}
-          </h1>
-        </div>
-
-        <div className="flex flex-row gap-2 flex-wrap py-2 max-w-xl mx-auto justify-center rounded-lg">
-          {getTopics(interviewType).map((topic, index) => (
-            <div
-              key={index}
-              className="flex-shrink-0 bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full whitespace-nowrap"
-            >
-              {topic}
-            </div>
-          ))}
-        </div>
-
-
+      <div className="">
         {/* Center Column - Main Content */}
         <div className="flex-1 flex flex-col items-center justify-center mt-8">
           {/* Interview Controls and Visualization */}
-          <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
+          <div className="flex flex-col items-center gap-8 w-full max-w-xl">
             <div className="w-full flex justify-end">
-              <div className="flex items-center gap-2 justify-end">
-                <span className="text-sm text-gray-600">Push to Talk</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    onChange={(e) => setIsVad(!e.target.checked)}
-                    checked={!isVad}
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
+              {isClientReady && isServerReady && (
+                <div className="flex items-center gap-2 justify-end">
+                  <span className="text-sm text-gray-300">Push to Talk</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      onChange={(e) => setIsVad(!e.target.checked)}
+                      checked={!isVad}
+                    />
+                    <div className="w-11 h-6 bg-gray-800 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              )}
             </div>
 
-            {!isClientReady && (
-              <div className="w-full">
-                <div className="mb-12 space-y-4 w-full">
-                  <div className="flex flex-col gap-2 w-full">
-                    <label htmlFor="voice-select" className="text-sm font-medium text-gray-700">
-                      Select Voice
-                    </label>
-                    <select
-                      id="voice-select"
-                      className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
-                      onChange={(e) => {
-                        setSelectedVoice(e.target.value);
-                      }}
-                      value={selectedVoice}
-                    >
-                      {['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'].map((voice) => (
-                        <option key={voice} value={voice}>
-                          {voice.charAt(0).toUpperCase() + voice.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="tone-select" className="text-sm font-medium text-gray-700">
-                      Conversation Tone
-                    </label>
-                    <select
-                      id="tone-select"
-                      className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
-                      onChange={(e) => {
-                        setConversationTone(e.target.value);
-                      }}
-                      value={conversationTone}
-                    >
-                      {['Professional', 'Warm', 'Helpful'].map((tone) => (
-                        <option key={tone} value={tone}>
-                          {tone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="speed-select" className="text-sm font-medium text-gray-700">
-                      Voice Speed
-                    </label>
-                    <select
-                      id="tone-select"
-                      className="block w-full rounded-md border border-gray-300 p-1 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
-                      onChange={(e) => {
-                        setVoiceSpeed(e.target.value);
-                      }}
-                      value={voiceSpeed}
-                    >
-                      {['Slow', 'Normal', 'Fast'].map((speed) => (
-                        <option key={speed} value={speed}>
-                          {speed}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { handleClientReady() }}
-                  className="inline-flex items-center px-8 py-4 rounded-lg bg-blue-600 text-white font-medium text-lg hover:bg-blue-700 transition-colors gap-2"
-                >
-                  <Play size={24} />
-                  Start Interview
-                </button>
-              </div>
-            )}
 
           </div>
         </div>
 
-        {/* Visualization */}
-        <div className="min-w-md max-w-2xl">
-          <div className="visualization-entry min-w-2xl justify-center flex my-20">
-            <canvas ref={clientCanvasRef} />
-            <canvas ref={serverCanvasRef} />
+        {!isClientReady && (
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex justify-center items-center">
+            <button className="bg-blue-500 rounded-full px-10 py-4 space-x-4 shadow-xl hover:shadow-2xl hover:bg-blue-400 transition flex items-center justify-center"
+              onClick={() => {
+                setShowSettings(false);
+                handleClientReady();
+              }}
+            >
+              <Play size={24} color="white" />
+              <span className="text-white text-xl">Start Interview</span>
+            </button>
           </div>
+        )}
 
-          <div className="flex justify-start space-x-4">
-            {isClientReady && (!isServerReady ? (
-              <button
-                disabled
-                className="inline-flex items-center px-8 py-4 rounded-lg text-gray-400 font-medium text-lg cursor-not-allowed gap-2"
+
+
+        {!isClientReady && (
+          <div className="">
+            <div className="mb-4 absolute bottom-0 w-full flex justify-center">
+            <button
+                onClick={() => setShowSettings(true)}
+                className="inline-flex items-center px-4 py-2 rounded-lg bg-gray-700 text-gray-100 hover:bg-gray-600 transition-colors gap-2"
               >
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Loading...
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => { handleEndInterview() }}
-                  className="inline-flex items-center px-8 py-4 rounded-lg border border-gray-50 border-2 text-red-800 font-medium text-lg hover:bg-gray-50 transition-colors gap-2"
-                >
-                  <X size={24} />
-                  End Interview
-                </button>
+                <Settings size={20} />
+              Interview Settings
+            </button>
+            </div>
 
-              </>
-            ))}
+            {showSettings && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="settings-panel bg-white rounded-lg p-8 max-w-md w-full">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-medium">Interview Settings</h3>
+                    <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-500">
+                      <X size={20} />
+                    </button>
+                  </div>
 
-            {!isVad && (
-              <button
-                onMouseDown={handleStartRecording}
-                onMouseUp={handleStopRecording}
-                className="inline-flex items-center px-8 py-4 rounded-lg text-white font-medium text-lg gap-2 bg-blue-500 hover:bg-blue-400 transition-colors"
-              >
-                <Mic size={24} />
-                Push to talk
-              </button>
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="voice-select" className="text-sm font-medium text-gray-700">
+                        Select Voice
+                      </label>
+                      <select
+                        id="voice-select"
+                        className="block w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                        onChange={(e) => setSelectedVoice(e.target.value)}
+                        value={selectedVoice}
+                      >
+                        {['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'].map((voice) => (
+                          <option key={voice} value={voice}>
+                            {voice.charAt(0).toUpperCase() + voice.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="tone-select" className="text-sm font-medium text-gray-700">
+                        Conversation Tone
+                      </label>
+                      <select
+                        id="tone-select"
+                        className="block w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                        onChange={(e) => setConversationTone(e.target.value)}
+                        value={conversationTone}
+                      >
+                        {['Professional', 'Warm', 'Helpful'].map((tone) => (
+                          <option key={tone} value={tone}>
+                            {tone}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="speed-select" className="text-sm font-medium text-gray-700">
+                        Voice Speed
+                      </label>
+                      <select
+                        id="speed-select"
+                        className="block w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:ring-blue-500 shadow-sm"
+                        onChange={(e) => setVoiceSpeed(e.target.value)}
+                        value={voiceSpeed}
+                      >
+                        {['Slow', 'Normal', 'Fast'].map((speed) => (
+                          <option key={speed} value={speed}>
+                            {speed}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+
+                </div>
+              </div>
             )}
           </div>
+        )}
 
-          {items.length > 0 && items.filter(item => item.role === 'assistant').slice(-1).map((item, index) => (
-            <div key={index} className="mt-4 p-4 rounded-lg">
-              <div className="text-sm text-gray-500 mb-1">Interviewer</div>
-              <div className="text-gray-700">{item.content}</div>
+        {isClientReady && !isServerReady && (
+
+          <div className="flex justify-center fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 items-center">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-gray-400">
+              Loading...
+            </span>
+          </div>
+        )}
+
+        {/* Visualization */}
+        <div className="min-w-md max-w-xl">
+          {isClientReady && isServerReady && (
+            <div className="visualization-entry min-w-2xl fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="justify-center flex ">
+                <canvas ref={clientCanvasRef} />
+                <canvas ref={serverCanvasRef} />
+              </div>
+
+              {items.length > 0 && items.filter(item => item.role === 'assistant').slice(-1).map((item, index) => (
+                <div className="max-w-md mx-auto">
+                  <div key={index} className="p-4 rounded-lg mx-auto border border-gray-700 font-mono text-sm">
+                    <div className="text-sm font-light text-gray-500 mb-1">Interviewer</div>
+                    <div className="text-white text-gray-300">{item.content}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+
+
+
+
 
 
         </div>
       </div>
+      <div className="bottom-0 absolute mb-4 flex justify-center w-full">
+        <div className="flex space-x-4">
+          {isClientReady && isServerReady && (
+            <button
+              onClick={() => { handleEndInterview() }}
+              className="inline-flex items-center px-8 py-2 rounded-full bg-red-600 text-gray-100 font-medium text-lg hover:bg-red-500 transition-colors gap-2"
+            >
+              <X size={24} />
+              <div className="">
+                End Interview
+              </div>
+            </button>
+          )}
+
+          {!isVad && isClientReady && isServerReady && (
+            <button
+              onMouseDown={handleStartRecording}
+              onMouseUp={handleStopRecording}
+              className="inline-flex items-center px-8 py-2 rounded-full text-white font-medium text-lg gap-2 bg-blue-500 hover:bg-blue-400 transition-colors"
+            >
+              <Mic size={24} />
+              Push to talk
+            </button>
+          )}
+        </div>
+      </div>
+
+
     </div>
 
   );

@@ -28,14 +28,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/feedback"
-            element={
-              <ProtectedRoute>
-                <FeedbackPage />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>

@@ -1,113 +1,79 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Copy, Check } from 'react-feather';
 import { useState } from 'react';
-import './FeedbackPage.scss';
+import Markdown from 'markdown-to-jsx';
 
-export const FeedbackPage = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { transcript, interviewType } = location.state || {};
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  if (!transcript) {
-    navigate('/dashboard');
-    return null;
-  }
-
-  const copyToClipboard = async (text: string, id: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-    }
-  };
-
-  // Helper function to combine consecutive user messages
-  const combineConsecutiveUserMessages = (transcript: any[]) => {
-    return transcript
-      .filter((item: any) => {
-        const content = item.formatted.text || item.formatted.transcript;
-        return content && content.trim().length > 0;
-      })
-      .reduce((acc: any[], item: any, index: number, array: any[]) => {
-        const prevItem = array[index - 1];
-        const prevCombinedItem = acc[acc.length - 1];
-
-        if (
-          item.role === 'user' && 
-          prevItem?.role === 'user' && 
-          prevCombinedItem?.role === 'user'
-        ) {
-          // Combine with previous user message
-          prevCombinedItem.messages.push({
-            id: item.id,
-            content: item.formatted.text || item.formatted.transcript
-          });
-          return acc;
-        } else {
-          // Create new item
-          const newItem = {
-            role: item.role,
-            messages: [{
-              id: item.id,
-              content: item.formatted.text || item.formatted.transcript
-            }]
-          };
-          return [...acc, newItem];
-        }
-      }, []);
-  };
-
+export const FeedbackPage = (
+  { header, interviewTitle, serverFeedback, items }: {
+    header: React.ReactNode, interviewTitle: string, serverFeedback?: string, items: any[]
+  }) => {
   return (
-    <div data-component="FeedbackPage" className="feedback-page">
-      <div className="header">
-        <div className="header-left">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="back-button"
-          >
-            <ArrowLeft size={20} />
-            <span>Back to Dashboard</span>
-          </button>
-          <h1 className='text-3xl font-extrabold tracking-tight text-gray-700'>{interviewType.toUpperCase()} INTERVIEW TRANSCRIPT</h1>
+    <div className="min-h-screen flex flex-col bg-gray-900">
+      {header}
+
+      <div className="py-10 max-w-2xl w-full mx-auto">
+        <h1 className="text-4xl font-light text-white">
+          {interviewTitle}
+        </h1>
+
+        <p className="text-gray-400">Your recent transcript.</p>
+      </div>
+
+      <div className="w-full py-10">
+        <div className="w-full max-w-2xl mx-auto">
+          {/* <h3 className="mb-2 text-lg font-light text-center text-gray-400">A summary of your interview</h3> */}
+          <div className="">
+            {serverFeedback ? (
+
+              <div className="text-sm text-gray-400 [&>ul>li]:list-disc [&>ul]:list-inside">
+                <Markdown options={{ forceBlock: true }}>{serverFeedback}</Markdown>
+              </div>
+
+            ) : (
+              <h1 className="text-gray-500 font-medium flex items-center gap-2">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Generating...</span>
+              </h1>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="transcript-container">
-        {combineConsecutiveUserMessages(transcript).map((item: any, index: number) => (
-          <div 
-            key={index}
-            className={`transcript-item ${item.role}`}
-          >
-            <div className="card-header">
-              <div className="speaker-label">
-                {item.role === 'user' ? 'You' : 'Interviewer'}
+      <div className=" bg-gray-800">
+
+
+        <div className="w-full max-w-2xl mx-auto mt-8 grid grid-cols-1">
+
+          <h3 className="mb-2 text-lg font-light text-gray-300 text-center">Your interview transcript</h3>
+          <div className="pt-10 pb-20">
+          {items.map((item, index) => item.content && (
+            (item.role === 'assistant') ? (
+
+              <div key={index} className="py-4 px-2 text-left">
+                <p className="text-gray-200 font-mono text-sm">
+                  <strong>Interviewer: </strong>
+                  <span>{item.content ? item.content : '(truncated)'}</span>
+                </p>
+
               </div>
-              {item.role === 'user' && (
-                <button
-                  className="copy-button"
-                  onClick={() => copyToClipboard(
-                    item.messages.map((m: any) => m.content).join('\n\n'),
-                    item.messages[0].id
-                  )}
-                >
-                  {copiedId === item.messages[0].id ? <Check size={16} /> : <Copy size={16} />}
-                  <span>{copiedId === item.messages[0].id ? 'Copied!' : 'Copy'}</span>
-                </button>
-              )}
-            </div>
-            <div className="content">
-              {item.messages.map((message: any, msgIndex: number) => (
-                <div key={message.id} className={msgIndex > 0 ? 'mt-4 pt-4 border-t border-gray-100' : ''}>
-                  {message.content}
-                </div>
-              ))}
-            </div>
+            ) : (
+              <div className="py-4 px-2 text-left">
+                <p className="text-white font-mono text-sm" >
+                  <strong>You: </strong>
+                  <span className="">{item.content ? item.content : '(truncated)'}</span>
+                </p>
+              </div>
+            )
+          ))}
           </div>
-        ))}
+
+        </div>
       </div>
+
     </div>
-  );
+  )
 }; 
