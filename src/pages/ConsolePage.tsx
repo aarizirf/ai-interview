@@ -112,6 +112,7 @@ export function ConsolePage() {
 
     newSocket.onclose = async () => {
       setIsConnected(false);
+      wavRecorderRef.current.end();
     };
 
     setSocket(newSocket);
@@ -119,6 +120,7 @@ export function ConsolePage() {
     return () => {
       newSocket.close();
       wavStreamPlayerRef.current.interrupt(); 
+      wavRecorderRef.current.end();
     }
   }, []);
 
@@ -132,8 +134,9 @@ export function ConsolePage() {
     const wavRecorder = wavRecorderRef.current;
 
     if (isVad) {
+      console.log("Sending data 1");
       wavRecorder.record((data) => {
-        if (hasReceivedAudio && socket) {
+        if (socket) {
           socket.send(data.mono);
         }
       });
@@ -314,7 +317,7 @@ export function ConsolePage() {
 
     if (isVad) {
       await wavRecorder.record((data) => {
-        if (socket && hasReceivedAudio) {
+        if (socket) {
           socket.send(data.mono);
         }
       });
@@ -334,6 +337,7 @@ export function ConsolePage() {
     setIsFeedbackMode(true);
 
     const wavRecorder = wavRecorderRef.current;
+    wavRecorder.end();
     const wavStreamPlayer = wavStreamPlayerRef.current;
     if (isVad) {
       await wavRecorder.pause();
@@ -355,7 +359,6 @@ export function ConsolePage() {
     await wavRecorder.record((data) => {
       if (socket) {
         socket.send(data.mono);
-        console.log("Sending data");
       }
     });
   }
