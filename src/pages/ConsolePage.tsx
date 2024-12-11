@@ -9,7 +9,7 @@
  * You can run it with `npm run relay`, in parallel with `npm start`
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useLayoutEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
@@ -23,7 +23,6 @@ import { getTopics } from '../utils/topics';
 import { getInstructions, getQuestions } from '../utils/instructions/helper';
 
 import { FeedbackPage } from './FeedbackPage';
-import { get } from 'http';
 
 const getInterviewTitle = (type: InterviewType): string => {
   switch (type) {
@@ -89,21 +88,18 @@ export function ConsolePage() {
   const [serverFeedback, setServerFeedback] = useState<string | undefined>(undefined);
   const [isVad, setIsVad] = useState<boolean>(true);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [hasReceivedAudio, setHasReceivedAudio] = useState<boolean>(false);
 
   useEffect(() => {
     console.log("Do this once")
-    if (!isConnected) {
-      handleConnectWebSocket();
-    }
-  }, []);
 
-  /* Connect Web Socket Fn */
-  async function handleConnectWebSocket() {
+    if (isConnected) return;
+
     let serverUrl = "wss://ws1.aarizirfan.com";
 
     if (window.location.hostname === 'localhost') {
       console.log("Running locally");
-      // serverUrl = "ws://localhost:8080";
+      serverUrl = "ws://localhost:8080";
     }
 
     const newSocket = new WebSocket(serverUrl);
@@ -119,6 +115,16 @@ export function ConsolePage() {
     };
 
     setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+      wavStreamPlayerRef.current.interrupt(); 
+    }
+  }, []);
+
+  /* Connect Web Socket Fn */
+  async function handleConnectWebSocket() {
+    
   }
 
   useEffect(() => {
@@ -127,7 +133,7 @@ export function ConsolePage() {
 
     if (isVad) {
       wavRecorder.record((data) => {
-        if (socket) {
+        if (hasReceivedAudio && socket) {
           socket.send(data.mono);
         }
       });
@@ -148,9 +154,14 @@ export function ConsolePage() {
     }
   }
 
+  useEffect(() => {
+    if (!isConnected) {
+      wavStreamPlayerRef.current.interrupt();
+    }
+  }, [isConnected]);
+
   /* Handling Web Socket Media Event */
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
 
     async function handleMessage(event: MessageEvent) {
       if (typeof event.data !== "string") {
@@ -158,8 +169,9 @@ export function ConsolePage() {
         const buf = await event.data.arrayBuffer();
         const wavStreamPlayer = wavStreamPlayerRef.current;
 
-        if (!isFeedbackMode) {
+        if (!isFeedbackMode && isConnected) {
           wavStreamPlayer.add16BitPCM(buf, "");
+          setHasReceivedAudio(true);
         }
       } else if (typeof event.data === "string") {
         const res = JSON.parse(event.data);
@@ -200,13 +212,6 @@ export function ConsolePage() {
     if (socket) {
       socket.onmessage = handleMessage;
     }
-
-    return () => {
-      if (socket) {
-        socket.onmessage = null;
-      }
-      clearTimeout(timeoutId);
-    };
   }, [socket, isServerReady]);
 
 
@@ -309,7 +314,7 @@ export function ConsolePage() {
 
     if (isVad) {
       await wavRecorder.record((data) => {
-        if (socket) {
+        if (socket && hasReceivedAudio) {
           socket.send(data.mono);
         }
       });
@@ -412,12 +417,13 @@ export function ConsolePage() {
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-gray-900 fixed w-full">
+      <div className="fixed top-0 w-full">
       {header}
 
       {!isClientReady && (
         <div className="">
-          <div className="mb-0">
+          <div className="">
             <h1 className="text-3xl font-light text-white -mt-6 mb-4 text-center">
               {getInterviewTitle(interviewType)}
             </h1>
@@ -435,6 +441,7 @@ export function ConsolePage() {
           </div>
         </div>
       )}
+      </div>
 
 
 
@@ -483,7 +490,7 @@ export function ConsolePage() {
 
         {!isClientReady && (
           <div className="">
-            <div className="mb-4 absolute bottom-0 w-full flex justify-center">
+            <div className="mb-4 fixed bottom-0 w-full flex justify-center">
               <button
                 onClick={() => setShowSettings(true)}
                 className="inline-flex items-center px-4 py-2 rounded-lg bg-gray-700 text-gray-100 hover:bg-gray-600 transition-colors gap-2"
@@ -600,7 +607,7 @@ export function ConsolePage() {
 
         </div>
       </div>
-      <div className="bottom-0 absolute mb-4 w-full flex justify-center">
+      <div className="bottom-0 fixed mb-4 w-full flex justify-center">
         <div className="">
 
           {items.length > 0 && items.filter(item => item.role === 'assistant').slice(-1).map((item, index) => (
